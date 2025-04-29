@@ -1,7 +1,7 @@
 .include "m328pdef.inc"
 .org 0x0000
 rjmp main
-.org 0x0004
+.org 0x0008
 rjmp tratar_interrupt
 
 ;--------------------------------------------------INICIO_DO_MOSTRADOR--------------------------------------------------
@@ -11,7 +11,7 @@ mostrador:
 	cpi r21, 0x00
 	breq leddez ; vai para leddez se o digito for zero
 
-	OUT PORTD, r21 ; centena para saída
+	OUT PORTD, r21 ; centena para saÃ­da
 	sbi PORTB, 0 ; liga led das centenas
 	cbi PORTD, 3 ; desliga led das dezenas
 	cbi PORTD, 2 ; desliga led das unidades
@@ -34,7 +34,7 @@ mostrador:
 	breq ledunid ; vai para ledunid se o digito da dezena for zero
 
 	mostra:
-	OUT PORTD, r22 ; dezena para saída
+	OUT PORTD, r22 ; dezena para saÃ­da
 	sbi PORTD, 3
 	cbi PORTB, 0
 	cbi PORTD, 2
@@ -49,7 +49,7 @@ mostrador:
 	;------------
 
 	ledunid:
-	OUT PORTD, r23 ; unidade para saída
+	OUT PORTD, r23 ; unidade para saÃ­da
 	sbi PORTD, 2
 	cbi PORTB, 0
 	cbi PORTD, 3
@@ -68,30 +68,30 @@ rjmp mostrador;
 
 ;--------------------------------------------------INICIO_DA_MAIN--------------------------------------------------
 main:
-	ldi XH, high(100) ; distância mostrada
+	ldi XH, high(100) ; distÃ¢ncia mostrada
 	ldi XL, low(100)
 	
-	ldi YH, high(000) ; distância salva
+	ldi YH, high(000) ; distÃ¢ncia salva
 	ldi YL, low(000)
 
 	ldi r17, 0xF6; 1111 0110 
 	out DDRD, r17
-	; pd7, pd6, pd5, pd4 são bits do decodificador
+	; pd7, pd6, pd5, pd4 sÃ£o bits do decodificador
 	; pd3, pd2 liga led
 	; tj2, tj3
 
 	ldi r17, 0x01; 0000 0001
 	out DDRB, r17
-	; pb0 é tj1
+	; pb0 Ã© tj1
 
 	ldi r17, 0x10; 0001 0000
 	out DDRC, r17
-	; pc3, pc2, pc1 são os botões s3, s2, s1
-	; pc4 é o trigger
-	; pc5 é o echo
+	; pc3, pc2, pc1 sÃ£o os botÃµes s3, s2, s1
+	; pc4 Ã© o trigger
+	; pc5 Ã© o echo
 
 	
-	sei ; habilita interrupção global
+	sei ; habilita interrupÃ§Ã£o global
 	ldi r17, 0x02 ; 0000 0010
 	sts PCICR, r17
 	ldi r17, 0x0E ; 0000 1110
@@ -99,7 +99,7 @@ main:
 
 	ldi r17, 0x0E; 0000 1111
 	out DDRB, r17
-	; pb3, pb2, pb1 são do RGB
+	; pb3, pb2, pb1 sÃ£o do RGB
 		sbi PORTB, 2 ; led red
 		cbi PORTB, 3
 		cbi PORTB, 4
@@ -113,10 +113,10 @@ bcd:
 	clr r22 ; dezena
 	clr r23 ; unidade
 
-	;push r25 ; guarda o valor que será mostrado no STACK
+	;push r25 ; guarda o valor que serÃ¡ mostrado no STACK
 	;push r24
 
-	;pop r24 ; recupera o valor que será mostrado no STACK
+	;pop r24 ; recupera o valor que serÃ¡ mostrado no STACK
 	;pop r25
 
 	sbiw r25:r24, 0x3F ; subtrai 63 do valor binario
@@ -316,7 +316,7 @@ s1:
 
 	distancia:
 		adiw ZH:ZL, 0x3A
-		sbiw ZH:ZL, 0x3A ; 58 ciclos são 2 cm
+		sbiw ZH:ZL, 0x3A ; 58 ciclos sÃ£o 2 cm
 		inc r19
 		sbiw ZH:ZL, 0x3A ; subtracao para verificar se Z > 58
 		brpl distancia
