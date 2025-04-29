@@ -1,7 +1,7 @@
 .include "m328pdef.inc"
 .org 0x0000
 rjmp main
-.org 0x0004
+.org 0x0008
 rjmp tratar_interrupt
 
 ;--------------------------------------------------INICIO_DO_CONTADOR--------------------------------------------------
@@ -14,7 +14,7 @@ contador:
 		sbiw YH:YL, 1
 		dec r20
 		cpi r20, 0
-		brne decrementar ; faz a operaÁ„o Y - 1 r25 vezes. Fazendo assim Y - r25
+		brne decrementar ; faz a opera√ß√£o Y - 1 r25 vezes. Fazendo assim Y - r25
 
 	rjmp fim_operacao
 
@@ -22,7 +22,7 @@ contador:
 		adiw YH:YL, 1
 		dec r20
 		cpi r20, 0
-		brne incrementar ; faz a operaÁ„o Y + 1 r25 vezes. Fazendo assim Y + r25
+		brne incrementar ; faz a opera√ß√£o Y + 1 r25 vezes. Fazendo assim Y + r25
 
 	fim_operacao:
 	pop r20 ; recupera o valor de passo
@@ -81,7 +81,7 @@ mostrador:
 			cpi r21, 0x00
 			breq leddez ; vai para leddez se o digito for zero
 
-			OUT PORTD, r21 ; centena para saÌda
+			OUT PORTD, r21 ; centena para sa√≠da
 			sbi PORTB, 0 ; liga led das centenas
 			cbi PORTD, 3 ; desliga led das dezenas
 			cbi PORTD, 2 ; desliga led das unidades
@@ -104,7 +104,7 @@ mostrador:
 			breq ledunid ; vai para ledunid se o digito da dezena for zero
 
 			mostra:
-			OUT PORTD, r22 ; dezena para saÌda
+			OUT PORTD, r22 ; dezena para sa√≠da
 			sbi PORTD, 3
 			cbi PORTB, 0
 			cbi PORTD, 2
@@ -119,7 +119,7 @@ mostrador:
 			;------------
 
 			ledunid:
-			OUT PORTD, r23 ; unidade para saÌda
+			OUT PORTD, r23 ; unidade para sa√≠da
 			sbi PORTD, 2
 			cbi PORTB, 0
 			cbi PORTD, 3
@@ -152,7 +152,7 @@ main:
 
 	ldi r20, 0x0F ; passo de fabrica
 
-	ldi ZH, high(999) ; m·ximo de fabrica
+	ldi ZH, high(999) ; m√°ximo de fabrica
 	ldi ZL, low(999)
 
 	ldi YH, high(0) ; atual de fabrica
@@ -163,18 +163,18 @@ main:
 
 	ldi r17, 0xF6; 1111 0110 
 	out DDRD, r17
-	; pd7, pd6, pd5, pd4 s„o bits do decodificador
+	; pd7, pd6, pd5, pd4 s√£o bits do decodificador
 
 	ldi r17, 0x0F; 0000 1111
 	out DDRB, r17
-	; pb3, pb2, pb1 s„o do RGB
+	; pb3, pb2, pb1 s√£o do RGB
 
 	ldi r17, 0x00; 0000 0000
 	out DDRC, r17
-	; pc3, pc2, pc1 s„o os botıes
-	; pc0 È o potenciometro
+	; pc3, pc2, pc1 s√£o os bot√µes
+	; pc0 √© o potenciometro
 
-	sei ; habilita interrupÁ„o global
+	sei ; habilita interrup√ß√£o global
 	ldi r17, 0x02 ; 0000 0010
 	sts PCICR, r17
 	ldi r17, 0x0E ; 0000 1110
@@ -256,10 +256,10 @@ bcd:
 	clr r22 ; dezena
 	clr r23 ; unidade
 
-	;push r25 ; guarda o valor que ser· mostrado no STACK
+	;push r25 ; guarda o valor que ser√° mostrado no STACK
 	;push r24
 
-	;pop r24 ; recupera o valor que ser· mostrado no STACK
+	;pop r24 ; recupera o valor que ser√° mostrado no STACK
 	;pop r25
 
 	sbiw r25:r24, 0x3F ; subtrai 63 do valor binario
