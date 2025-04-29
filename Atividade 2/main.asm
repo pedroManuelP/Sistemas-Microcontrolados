@@ -179,6 +179,23 @@ main:
 	sts PCICR, r17
 	ldi r17, 0x0E ; 0000 1110
 	sts PCMSK1, r17
+	
+	;-------------------------- conversor A/D de Sama --------------------------
+	cbi     DDRC, 0      ; defina PC pin 0 como entrada(tensao do potenciometro)
+	ldi     r16, 0x60
+	sts     ADMUX, r16   ; defina AVcc como referencia e ajuste a esquerda             
+	ldi     r16, 0x00
+	sts     ADCSRB, r16  ; defina o modo de trigger free running		
+	ldi     r16, 0x87    
+	sts     ADCSRA, r16  ; habilite o adc e utilize uma pre-escala de 128
+
+	ldi     r16,0x83
+	sts     TCCR2A,r16   ; defina o modo de opercao fast pwm
+	ldi     r16,0x01
+	sts     TCCR2B,r16   ; defina o clock do timer 2 sem pre-escala 
+	sts     TCNT2,r16    ; inicialize o timer 2 em 0x01
+	ldi     r16,0x3F     
+	sts     OCR2A,r16    ; inicialize o duty cycle do pwm em 0x3F
 
 	clr r16; estado
 ;--------------------------------------------------FINAL_DA_MAIN--------------------------------------------------
@@ -217,10 +234,14 @@ controlador:
 		cbi PORTB, 2
 		cbi PORTB, 1
 
+		rcall conversor_de_sama
+		mov XH,r22 
+		mov XL,r21
 		movw r25:r24, XH:XL ; copia o minimo para o par de registradores do bcd
 		rcall bcd ; converte r25:r24 para BCD
-		LDI R17, 0x0F ; ciclos externos
-		LDI R18, 0x0F ; ciclos externos
+
+		LDI R17, 0x60 ; ciclos externos
+		LDI R18, 0x60 ; ciclos externos
 		rcall mostrador 
 		rjmp controlador
 	
@@ -229,10 +250,13 @@ controlador:
 		cbi PORTB, 3
 		cbi PORTB, 1
 
+		rcall conversor_de_sama
+		mov ZH,r22
+		mov ZL,r21
 		movw r25:r24, ZH:ZL ; copia o maximo para o par de registradores do bcd
 		rcall bcd ; converte r25:r24 para BCD
-		LDI R17, 0x0F ; ciclos externos
-		LDI R18, 0x0F ; ciclos externos
+		LDI R17, 0x60 ; ciclos externos
+		LDI R18, 0x60 ; ciclos externos
 		rcall mostrador 
 		rjmp controlador
 
@@ -241,14 +265,63 @@ controlador:
 		cbi PORTB, 3
 		cbi PORTB, 2
 
-		LDI R17, 0x0F ; ciclos externos
-		LDI R18, 0x0F ; ciclos externos
+		rcall conversor_de_sama
+		clr r22
+		mov r20,r21
+		LDI R17, 0x60 ; ciclos externos
+		LDI R18, 0x60 ; ciclos externos
 		clr r25
 		mov r24, r20 ; copia o passo para o par de registradores do bcd
 		rcall bcd ; converte r25:r24 para BCD
 		rcall mostrador 
 		rjmp controlador
 ;--------------------------------------------------FINAL_DO_CONTROLADOR--------------------------------------------------
+
+
+;--------------------------------------------------INICIO_DO_CONVERSOR--------------------------------------------------
+conversor_de_sama:
+loop:
+	rcall   Radc         ; salte para Radc (funcao para ler adc)
+	sts     OCR2A,r22    ; atualize o valor do duty cycle do pwm
+	ret     
+
+Radc:   
+	push r20 ; salva o passo no stack
+	ldi     r20, 0xC7    
+	sts     ADCSRA,r20   ; inicie a conversao 
+
+loop_adc:
+	lds     r20, ADCSRA  ; carregue no registrador 20 o valor de ADCSRA
+	sbrs    r20, ADIF    ; verifique se o processo de conversao finalizou
+	rjmp    loop_adc 
+
+	lds     r21, ADCL    ; carregue o valor (L) do conversor ad no registrador 21
+	lds     r22, ADCH    ; carregue o valor (H) do conversor ad no registrador 22
+
+	lsr r22 ; r22 = 0xxx xxxx c = r22(0)
+	ror r21 ; r21 = b0 xxx xxxx c = r21(0)
+	clc
+	lsr r22
+	ror r21
+	clc
+
+	lsr r22 ; 
+	ror r21 ; 
+	clc
+	lsr r22
+	ror r21
+	clc
+
+	lsr r22 ; 
+	ror r21 ; 
+	clc
+	lsr r22
+	ror r21
+	clc
+	pop r20 ; recupera o passo do stack
+	ret                  ; retorne 
+;--------------------------------------------------FINAL_DO_CONVERSOR--------------------------------------------------
+
 
 ;--------------------------------------------------INICIO_DO_BCD--------------------------------------------------
 bcd:
