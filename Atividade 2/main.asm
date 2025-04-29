@@ -198,12 +198,12 @@ controlador:
 	breq estado_passo
 
 	estado_contador:
+		cbi PORTB, 1
 		cbi PORTB, 2
 		cbi PORTB, 3
-		cbi PORTB, 4
 
-		LDI R17, 0x51 ; ciclos externos
-		LDI R18, 0x51 ; ciclos externos
+		LDI R17, 0x61 ; ciclos externos
+		LDI R18, 0x61 ; ciclos externos
 		movw r25:r24, YH:YL ; copia o valor atual para o par de registradores do bcd
 		rcall bcd ; converte r25:r24 para BCD
 		rcall mostrador 
@@ -213,9 +213,9 @@ controlador:
 		
 
 	estado_min: 
-		sbi PORTB, 2 ; led red
-		cbi PORTB, 3
-		cbi PORTB, 4
+		sbi PORTB, 3 ; led red
+		cbi PORTB, 2
+		cbi PORTB, 1
 
 		movw r25:r24, XH:XL ; copia o minimo para o par de registradores do bcd
 		rcall bcd ; converte r25:r24 para BCD
@@ -225,9 +225,9 @@ controlador:
 		rjmp controlador
 	
 	estado_max: 
-		sbi PORTB, 3 ; led green
-		cbi PORTB, 2
-		cbi PORTB, 4
+		sbi PORTB, 2 ; led green
+		cbi PORTB, 3
+		cbi PORTB, 1
 
 		movw r25:r24, ZH:ZL ; copia o maximo para o par de registradores do bcd
 		rcall bcd ; converte r25:r24 para BCD
@@ -237,9 +237,9 @@ controlador:
 		rjmp controlador
 
 	estado_passo: 
-		sbi PORTB, 4 ; led blue
-		cbi PORTB, 2
+		sbi PORTB, 1; led blue
 		cbi PORTB, 3
+		cbi PORTB, 2
 
 		LDI R17, 0x0F ; ciclos externos
 		LDI R18, 0x0F ; ciclos externos
@@ -399,11 +399,10 @@ bcd:
 ;--------------------------------------------------FINAL_DO_BCD--------------------------------------------------
 
 tratar_interrupt:
-lds r1,SREG
 push r20
+
 in r20, PINC
-cbr r20, $F0 ; r20 = 0000 xxx0
-cbr r20, 0
+andi r20, 0x0E ; r20 = 0000 xxx0
 
 cpi r20, 0x0C ; 0000 1100
 breq set_cresc
@@ -414,16 +413,21 @@ breq set_decre
 cpi r20, 0x0A ; 0000 1010
 breq mudar_estado
 
+cpi r20, 0x0E ; 0000 1110
+breq return
+
 set_cresc:
 	ldi r19, 0x00 ; contagem crescente
+	;sbi portb, 2
+	;cbi portb, 3
 	pop r20
-	sts SREG, r1
 	RETI
 
 set_decre:
 	ldi r19, 0x01 ; contagem decrescente
+	;sbi portb, 3
+	;cbi portb, 2
 	pop r20
-	sts SREG, r1
 	RETI
 
 mudar_estado:
@@ -442,23 +446,23 @@ mudar_estado:
 	estado_0:
 		ldi r16, 0x00
 		pop r20
-		sts SREG, r1
 		RETI
 
 	estado_1:
 		ldi r16, 0x01
 		pop r20
-		sts SREG, r1
 		RETI
 
 	estado_2:
 		ldi r16, 0x02
 		pop r20
-		sts SREG, r1
 		RETI
 
 	estado_3:
 		ldi r16, 0x03
 		pop r20
-		sts SREG, r1
 		RETI
+
+return:
+pop r20
+reti
