@@ -1,0 +1,33 @@
+Atividade 2
+Uso dos registradores:
+r26 até 31 são reservados para X,Y e Z
+
+r16: variável de estado
+	r16 = 00 : contador
+	r16 = 01 : mostrar mínimo
+	r16 = 10 : mostrar máximo
+	r16 = 11 : mostrar passo
+
+r20: passo do contador
+
+r19: informa se é crescente ou decrescente
+	r19 = 0x00 : crescente
+	r19 = 0x01 : decrescente
+
+r21, r22, r23: dígito da centena, dezena e unidade, respectivamente
+
+r25, r24, r18, r17: registradores temporários
+	r25:r24 : guardam o valor que vai ser convertido em BCD
+	r25 : qtde. de ciclos de delay entre cada dígito. OBS: qtde. de ciclos de delay = 4*r25 + 1
+	r18 : qtde de laços externos do mostrador
+	r17 : qtde de laços internos do mostrador		
+	
+	302 - 150 = 152 ciclos r17 = 1 r18 = 1
+	453 - 150 = 303 ciclos r17 = 2 r18 = 1
+	460 - 150 = 310 ciclos r17 = 1 r18 = 2
+	758 - 150 = 608 ciclos r17 = 2 r18 = 2
+	qtde total de ciclos ~= 152 * r17 * r18
+	1.000.000 ~= 152 * r17 * r18
+	6579 ~= r17*r18
+	r17 = 81 r18 = 81
+	
