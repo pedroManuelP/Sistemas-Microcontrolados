@@ -22,12 +22,5 @@ r25, r24, r18, r17: registradores temporários
 	r18 : qtde de laços externos do mostrador
 	r17 : qtde de laços internos do mostrador		
 	
-	302 - 150 = 152 ciclos r17 = 1 r18 = 1
-	453 - 150 = 303 ciclos r17 = 2 r18 = 1
-	460 - 150 = 310 ciclos r17 = 1 r18 = 2
-	758 - 150 = 608 ciclos r17 = 2 r18 = 2
 	qtde total de ciclos ~= 152 * r17 * r18
-	1.000.000 ~= 152 * r17 * r18
-	6579 ~= r17*r18
-	r17 = 81 r18 = 81
 	
