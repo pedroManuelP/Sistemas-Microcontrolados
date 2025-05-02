@@ -21,6 +21,5 @@ r25, r24, r18, r17: registradores temporários
 	r25 : qtde. de ciclos de delay entre cada dígito. OBS: qtde. de ciclos de delay = 4*r25 + 1
 	r18 : qtde de laços externos do mostrador
 	r17 : qtde de laços internos do mostrador		
-	
-	qtde total de ciclos ~= 152 * r17 * r18
+	etc.......
 	
