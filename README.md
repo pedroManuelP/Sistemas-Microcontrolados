@@ -1,6 +1,6 @@
 # Sistemas-Microcontrolados
 Repositório das atividades e códigos-fonte.
 
-Dupla:
-Pedro Manuel Pereira Chamorro
+Dupla: <br>
+Pedro Manuel Pereira Chamorro <br>
 Valdemar Gonçalves Pereira Neto
