@@ -15,6 +15,7 @@ loop1:
 		cpi r29, 0x00; compara centena com zero
 		breq leddez ; vai para leddez se o digito for zero
 
+		ledcent:
 		OUT PORTD, r29 ; digito da centena para led7seg
 		sbi PORTB, 0 ; liga led das centenas
 		cbi PORTD, 3 ; desliga led das centenas
