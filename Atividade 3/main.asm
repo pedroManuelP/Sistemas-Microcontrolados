@@ -1,11 +1,12 @@
 .include "m328pdef.inc"
 .org 0x0000
 rjmp main
-.org 0x0008
+.org PCI1addr
 rjmp tratar_interrupt
 
 ;--------------------------------------------------INICIO_DO_MOSTRADOR--------------------------------------------------
 mostrador:
+	movw r25:r24, XH:XL
 	rcall bcd
 
 	cpi r21, 0x00
@@ -68,8 +69,8 @@ rjmp mostrador;
 
 ;--------------------------------------------------INICIO_DA_MAIN--------------------------------------------------
 main:
-	ldi XH, high(100) ; distância mostrada
-	ldi XL, low(100)
+	ldi XH, high(000) ; distância mostrada
+	ldi XL, low(000)
 	
 	ldi YH, high(000) ; distância salva
 	ldi YL, low(000)
@@ -97,12 +98,13 @@ main:
 	ldi r17, 0x0E ; 0000 1110
 	sts PCMSK1, r17
 
-	ldi r17, 0x0E; 0000 1111
-	out DDRB, r17
+	ldi r17, 0x0C; 0000 1100
+	sts EICRA, r17
+
+	sbi DDRB, 1
+	sbi DDRB, 2
+	sbi DDRB, 3
 	; pb3, pb2, pb1 são do RGB
-		sbi PORTB, 2 ; led red
-		cbi PORTB, 3
-		cbi PORTB, 4
 
 	rjmp mostrador
 ;--------------------------------------------------FINAL_DA_MAIN--------------------------------------------------
@@ -254,45 +256,29 @@ bcd:
 	add r23, r24 ; r24 = dcba 0000
 
 	ret
+
 ;--------------------------------------------------FINAL_DO_BCD--------------------------------------------------
 
 tratar_interrupt:
-ldi XH, high(100)
-ldi XL, low(100)
-reti
-ldi r16, 0xFF
-;blink:
-sbi PORTB, 2 ; led red
-		cbi PORTB, 3
-		cbi PORTB, 4
-		dec r16
-		cpi r16, 0x00
-		brne trigger
-reti
+in r20, PINC ; PINC é entrada / PORTC é saída
+andi r20, 0x0E ; r20 = 0000 xxx0
 
-push r20 ; valor original
-in r20, PINC ; pega vetor PINC
-
-push r20 ; pinc
-andi r20, 0x02 ; 0000 0010
-cpi r20, 0x02
+cpi r20, 0x0C ; 0000 1100
 breq s1
 
-pop r20 ; pinc
-push r20
-andi r20, 0x04 ; 0000 0100
-cpi r20, 0x04
+cpi r20, 0x0A ; 0000 1010
 breq s2
 
-pop r20 ; pinc
-push r20
-andi r20, 0x08 ; 0000 1000
-cpi r20, 0x08
+cpi r20, 0x06 ; 0000 0110
 breq s3
 
+reti ; só por segurança
+
 s1:
-	pop r20
-	ldi r16, 0x02
+	clr XH
+	clr XL
+
+	ldi r16, 0x20 ; duração de trigger
 	trigger:
 		sbi PORTC, 4 ; trigger = 1 por 10 us
 		dec r16
@@ -300,44 +286,46 @@ s1:
 		brne trigger
 		cbi PORTC, 4
 
-	ldi ZH, 0x00 ; numero de ciclos de echo
-	ldi ZL, 0x00 ; numero de ciclos de echo
-
-	ldi r20, 0x07
-	echo:
-		adiw ZH:ZL, 0x06
+	espera:
 		in r16, PINC ; r16 = PINC
 		andi r16, 0x20 ; r16 = 00x0 0000
-		cpi r16, 0x20
-		breq echo  
+		cpi r16, 0x00 ; se echo é zero, espera
+		breq espera
 
-	ldi r19, 0x00 ; multiplo de 2 cm
-	sbiw ZH:ZL, 0x3A ; pra compensar depois
+	ldi ZH, 0x03 ; numero de ciclos de echo Z = 923
+	ldi ZL, 0x9A ; numero de ciclos de echo
 
-	distancia:
-		adiw ZH:ZL, 0x3A
-		sbiw ZH:ZL, 0x3A ; 58 ciclos são 2 cm
-		inc r19
-		sbiw ZH:ZL, 0x3A ; subtracao para verificar se Z > 58
-		brpl distancia
+	echo_high:
+		sbiw ZH:ZL, 0x01 ; subtrai 1
 
-	calculo:
+		in r16, PINC ; r16 = PINC
+		andi r16, 0x20 ; r16 = 00x0 0000
+		cpi r16, 0x00 ; se echo é zero, termina a contagem
+		breq echo_low
+
+		cpi ZH, 0x00 ; se ZH =/= zero, volta a contar
+		brne echo_high
+		cpi ZL, 0x00 ; se ZL =/= zero, volta a contar
+		brne echo_high
+
+	distancia_inc:
 		adiw XH:XL, 0x02
-		dec r19
-		cpi r19, 0x00
-		brne calculo
 
-	pop r20
+		ldi ZH, 0x03 
+		ldi ZL, 0x9A
+		rjmp echo_high
+
+	echo_low:
+	sbi PORTB, 1
+	cbi PORTB, 2
+	cbi PORTB, 3
 	reti 
+
+;----------------------------------------------------------------------------------------------------
 
 s2:
-	pop r20
-	;movw YH:YL, 
-
-	pop r20
 	reti 
+
 s3:
-	pop r20
-	movw XH:XL, YH:YL ; bota no mostrador o valor salvo
-	pop r20
+
 	reti
