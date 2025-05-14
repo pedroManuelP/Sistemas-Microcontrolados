@@ -1,0 +1,18 @@
+Funcionamento do LCD 16x2:
+1. Na main, usamos uma função para inicializar ele para que possa receber caracteres ou instruções.
+2. Processos de inicialização para 8 e 4 bits de dados estão descritos nas páginas 45 e 46 do datasheet do HD44780. Arquivo "HD44780U.PDF"
+
+Para enviar instruções: 
+1. enviamos o comando no canal de dados; 
+2. damos set no bit RS; e
+3. damos um pulso de enable.
+
+Para enviar caracteres: 
+1. enviamos o caracter no canal de dados; 
+2. damos clear no bit RS; e
+3. damos um pulso de enable.
+
+Obs: Tabela de comandos está no datasheet(Pág. 24) 
+Obs: Tabela de caracteres está no datasheet(Pág. 17 e 18) 
+Obs: Quando enviar para o canal de 4 bits, primeiro enviar o upper nibble depois o lower nibble
+Obs: Tabela de DDRAM address na página 11
