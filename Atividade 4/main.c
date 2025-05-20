@@ -27,23 +27,30 @@ void lcd_cmd(unsigned char c, char cd);
 void lcd_write(char *c);
 void lcd_init();
 void mde(char s);
-void numIntoString(char str[], int start_pos,int num);
+void numIntoString(char *str, int start_pos,int num);
 
 volatile char estado = 0;
 volatile char mudarRGB = 0;
 volatile char mudarTexto = 1;
-char bottom_line[] = "  0    0    0\0";
+
+char bottom_line[] =  "  0    0    0\0";
+char *ptr_bottomline = &bottom_line[0];
+
 volatile short int numRed = 0;
 volatile short int numGreen = 0;
 volatile short int numBlue = 0;
 
 int main(void)
 {
-	TCCR1A = 0xF1;//COM2A1:0 = 3  COM2B1:0 = 3  WGM13:0 = 5
-	TCCR1B = 0x09;//clk sem pre-escala
+	//set OC2x on CompMatch COM2x1:0 = 3
+	//fast pwm 8-bit WGM13:0 = 5
+	TCCR1A = 0b11110001;
+	TCCR1B = 0x09;// cs12:0 = 1 clk sem pre-escala
 	
-	TCCR2A = 0xC3; // COM2A1:0 = 2   WGM22:0 = 3
-	TCCR2B = 0x01;// 0x01 clk sem pre-escala
+	// clear OC2A on CompMatch
+	// fast pwm WGM22:0 = 3
+	TCCR2A = 0xC3;
+	TCCR2B = 0x01;// cs22:0 = 1 clk sem pre-escala
 
 	BLUE = 0x0000;
 	GREEN = 0x0000;
@@ -66,50 +73,32 @@ int main(void)
 			clr_bit(TCCR2A,7);
 			clr_bit(TCCR2A,6);
 			set_bit(PORTB,3);
-			}else{
+		}else{
 			set_bit(TCCR2A,7);
-			set_bit(TCCR2A,6);
+			clr_bit(TCCR2A,6);
 		}
+
 		if(GREEN == 0x0000){
 			clr_bit(TCCR1A,5);
 			clr_bit(TCCR1A,4);
 			set_bit(PORTB,2);
-			}else{
+		}else{
 			set_bit(TCCR1A,5);
-			set_bit(TCCR1A,4);
+			clr_bit(TCCR1A,4);
 		}
+
 		if(BLUE == 0x0000){
 			clr_bit(TCCR1A,7);
 			clr_bit(TCCR1A,6);
 			set_bit(PORTB,1);
-			}else{
+		}else{
 			set_bit(TCCR1A,7);
-			set_bit(TCCR1A,6);
+			clr_bit(TCCR1A,6);
 		}
 		
 		mde(estado);
-		
-		_delay_ms(250);
-		switch (estado)
-		{
-			case 0:
-			estado = 1;
-			break;
-			case 1:
-			estado = 2;
-			break;
-			case 2:
-			estado = 3;
-			break;
-			case 3:
-			estado = 0;
-			numRed += 50;
-			break;
-			default:
-			break;
-		}
-		mudarTexto = 1;
 	}
+	
 	return 0;
 }
 
@@ -169,19 +158,30 @@ void lcd_init(){
 	return;
 }
 
-void numIntoString(char str[], int start_pos,int num){
-	int digitos;
-	if(num > 100){
-		digitos = 3;
+void numIntoString(char *str, int start_pos,int num){
+	int centena,dezena,unidade;
+	
+	if(num >= 100){
+		centena = num/100;
+		dezena = (num - centena*100)/10;
+		unidade	= num - centena*100 - dezena*10;
+		
+		str[start_pos - 2] = centena + '0';
+		str[start_pos - 1] = dezena + '0';
+		str[start_pos] = unidade + '0';
 	}else if(num < 100 && num >= 10){
-		digitos = 2;
+		dezena = num/10;
+		unidade	= num - dezena*10;
+		
+		str[start_pos - 2] = ' ';
+		str[start_pos - 1] = dezena + '0';
+		str[start_pos] = unidade + '0';
 	}else{
-		digitos = 1;
-	}
-	
-	
-	for (int i = 0; i++; i < digitos){
-		str[start_pos - i] = num + '0';
+		unidade	= num;
+		
+		str[start_pos - 2] = ' ';
+		str[start_pos - 1] = ' ';
+		str[start_pos] = unidade + '0';
 	}
 	
 	return;
@@ -197,7 +197,6 @@ void mde(char s){
 			_delay_ms(10);
 			lcd_cmd(0xC0,0);
 			
-			numIntoString(bottom_line, 2, numRed);
 			bottom_line[3] = ' ';
 			bottom_line[8] = ' ';
 			bottom_line[13] = ' ';
@@ -220,8 +219,9 @@ void mde(char s){
 			lcd_cmd(0x02,0);
 			lcd_write("RED GREEN BLUE\0");
 			_delay_ms(10);
-			lcd_cmd(0xC0,0); //desloca o cursor para a segunda linha do LCD
+			lcd_cmd(0xC0,0);
 			
+			numIntoString(ptr_bottomline, 2, numRed);
 			bottom_line[3] = '*';
 			bottom_line[8] = ' ';
 			bottom_line[13] = ' ';
@@ -246,6 +246,7 @@ void mde(char s){
 			_delay_ms(10);
 			lcd_cmd(0xC0,0);
 			
+			numIntoString(ptr_bottomline, 7, numGreen);
 			bottom_line[3] = ' ';
 			bottom_line[8] = '*';
 			bottom_line[13] = ' ';
@@ -270,6 +271,7 @@ void mde(char s){
 			_delay_ms(10);
 			lcd_cmd(0xC0,0);
 			
+			numIntoString(ptr_bottomline, 12, numBlue);
 			bottom_line[3] = ' ';
 			bottom_line[8] = ' ';
 			bottom_line[13] = '*';
@@ -305,6 +307,6 @@ ISR(PCINT1_vect) {
 		mudarRGB = 0;
 	}else{}
 	
-	if(PINC == 0x0C) mudarRGB = 1;
-	if(PINC == 0x06) mudarRGB = 2;
+	if(PINC == 0x0C) mudarRGB = 1; mudarTexto = 1;
+	if(PINC == 0x06) mudarRGB = 2; mudarTexto = 1;
 }
