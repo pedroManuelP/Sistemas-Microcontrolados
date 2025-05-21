@@ -44,7 +44,7 @@ int main(void)
 {
 	//set OC2x on CompMatch COM2x1:0 = 3
 	//fast pwm 8-bit WGM13:0 = 5
-	TCCR1A = 0b11110001;
+	TCCR1A = 0xF1;
 	TCCR1B = 0x09;// cs12:0 = 1 clk sem pre-escala
 	
 	// clear OC2A on CompMatch
@@ -70,30 +70,33 @@ int main(void)
 	while (1) 
 	{
 		if(RED == 0x00){
+			//apaga led se OCRnx for zero
 			clr_bit(TCCR2A,7);
 			clr_bit(TCCR2A,6);
 			set_bit(PORTB,3);
 		}else{
 			set_bit(TCCR2A,7);
-			clr_bit(TCCR2A,6);
+			set_bit(TCCR2A,6);
 		}
 
 		if(GREEN == 0x0000){
+			//apaga led se OCRnx for zero
 			clr_bit(TCCR1A,5);
 			clr_bit(TCCR1A,4);
 			set_bit(PORTB,2);
 		}else{
 			set_bit(TCCR1A,5);
-			clr_bit(TCCR1A,4);
+			set_bit(TCCR1A,4);
 		}
 
 		if(BLUE == 0x0000){
+			//apaga led se OCRnx for zero
 			clr_bit(TCCR1A,7);
 			clr_bit(TCCR1A,6);
 			set_bit(PORTB,1);
 		}else{
 			set_bit(TCCR1A,7);
-			clr_bit(TCCR1A,6);
+			set_bit(TCCR1A,6);
 		}
 		
 		mde(estado);
@@ -189,6 +192,7 @@ void numIntoString(char *str, int start_pos,int num){
 
 void mde(char s){
 	switch(s){
+	//--------------------ESTADO_INICIAL--------------------
 	case 0:
 		if(mudarTexto == 1){
 			lcd_cmd(0x01,0);
@@ -204,14 +208,27 @@ void mde(char s){
 			mudarTexto = 0;
 		}
 		break;
+	//--------------------ESTADO_INICIAL--------------------
+		
+	//--------------------ESTADO_ALTERA_RED--------------------
 	case 1:
 		if(mudarRGB == 1){
-			numRed += 5;
+			if(numRed == 255){
+				numRed = 255;
+			}else{
+				numRed += 5;	
+			}
+			
 			mudarRGB = 0;
 		}else if(mudarRGB == 2){
-			numRed -= 5;
+			if(numRed == 0){
+				numRed = 0;
+			}else{
+				numRed -= 5;
+			}
 			mudarRGB = 0;
 		}else{}
+			
 		RED = numRed;
 		
 		if(mudarTexto == 1){
@@ -229,14 +246,26 @@ void mde(char s){
 			mudarTexto = 0;
 		}
 		break;
+	//--------------------ESTADO_ALTERA_RED--------------------
+	
+	//--------------------ESTADO_ALTERA_BLUE--------------------
 	case 2:
-		if(mudarRGB){
-			numGreen += 5;
+		if(mudarRGB == 1){
+			if(numGreen == 255){
+				numGreen = 255;
+			}else{
+				numGreen += 5;
+			}
 			mudarRGB = 0;
 		}else if(mudarRGB == 2){
-			numGreen -= 5;
+			if(numGreen == 0){
+				numGreen = 0;
+			}else{
+				numGreen -= 5;
+			}
 			mudarRGB = 0;
 		}else{}
+			
 		GREEN = numGreen;
 		
 		if(mudarTexto == 1){
@@ -254,14 +283,26 @@ void mde(char s){
 			mudarTexto = 0;
 		}
 		break;
+	//--------------------ESTADO_ALTERA_BLUE--------------------
+	
+	//--------------------ESTADO_ALTERA_GREEN--------------------
 	case 3:
 		if(mudarRGB == 1){
-			numBlue += 5;
+			if(numBlue == 255){
+				numBlue = 255;
+			}else{
+				numBlue += 5;
+			}
 			mudarRGB = 0;
 		}else if(mudarRGB == 2){
-			numBlue -= 5;
+			if(numBlue == 0){
+				numBlue = 0;
+			}else{
+				numBlue -= 5;
+			}
 			mudarRGB = 0;
 		}else{}
+			
 		BLUE = numBlue;
 		
 		if(mudarTexto == 1){
@@ -279,6 +320,8 @@ void mde(char s){
 			mudarTexto = 0;
 		}
 		break;
+	//--------------------ESTADO_ALTERA_GREEN--------------------
+	
 	default:
 		break;
 	}
@@ -286,7 +329,10 @@ void mde(char s){
 }
 
 ISR(PCINT1_vect) {
-	if(PINC == 0x0A){
+	//PC1 -> aumenta
+	//PC2 -> estado
+	//PC3 -> diminui
+	if((PINC & 0x0E) == 0x0A){
 		switch(estado){
 		case 0:
 			estado = 1;
@@ -307,6 +353,6 @@ ISR(PCINT1_vect) {
 		mudarRGB = 0;
 	}else{}
 	
-	if(PINC == 0x0C) mudarRGB = 1; mudarTexto = 1;
-	if(PINC == 0x06) mudarRGB = 2; mudarTexto = 1;
+	if((PINC & 0x0E) == 0x0C) mudarRGB = 1; mudarTexto = 1;
+	if((PINC & 0x0E) == 0x06) mudarRGB = 2; mudarTexto = 1;
 }
