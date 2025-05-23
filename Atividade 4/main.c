@@ -28,10 +28,12 @@ void lcd_write(char *c);
 void lcd_init();
 void mde(char s);
 void numIntoString(char *str, int start_pos,int num);
+void verifyRGB();
 
 volatile char estado = 0;
 volatile char mudarRGB = 0;
 volatile char mudarTexto = 1;
+volatile int numOVF0 = 0;
 
 char bottom_line[] =  "  0    0    0\0";
 char *ptr_bottomline = &bottom_line[0];
@@ -39,18 +41,23 @@ char *ptr_bottomline = &bottom_line[0];
 volatile short int numRed = 0;
 volatile short int numGreen = 0;
 volatile short int numBlue = 0;
+volatile short int passo = 5;
 
 int main(void)
 {
+	TCCR0A = 0x00;
+	TCCR0B = 0x00;// 0x05 para clk/1024
+	TCNT0 = 0x00;// zera timer0
+	
 	//set OC2x on CompMatch COM2x1:0 = 3
 	//fast pwm 8-bit WGM13:0 = 5
-	TCCR1A = 0xF1;
-	TCCR1B = 0x09;// cs12:0 = 1 clk sem pre-escala
+	TCCR1A = 0xA1;
+	TCCR1B = 0x0B;// cs12:0 = 1 clk sem pre-escala
 	
 	// clear OC2A on CompMatch
 	// fast pwm WGM22:0 = 3
-	TCCR2A = 0xC3;
-	TCCR2B = 0x01;// cs22:0 = 1 clk sem pre-escala
+	TCCR2A = 0x83;
+	TCCR2B = 0x04;// cs22:0 = 1 clk sem pre-escala
 
 	BLUE = 0x0000;
 	GREEN = 0x0000;
@@ -62,46 +69,26 @@ int main(void)
 	
 	PCICR = 0x02;
 	PCMSK1 = 0x0E;
+	TIMSK0 = 0x01;
 	sei();
 	
 	lcd_init();	
 	lcd_cmd(0x01,0);
 	lcd_cmd(0x02,0);
-	while (1) 
-	{
-		if(RED == 0x00){
-			//apaga led se OCRnx for zero
-			clr_bit(TCCR2A,7);
-			clr_bit(TCCR2A,6);
-			set_bit(PORTB,3);
-		}else{
-			set_bit(TCCR2A,7);
-			set_bit(TCCR2A,6);
-		}
-
-		if(GREEN == 0x0000){
-			//apaga led se OCRnx for zero
-			clr_bit(TCCR1A,5);
-			clr_bit(TCCR1A,4);
-			set_bit(PORTB,2);
-		}else{
-			set_bit(TCCR1A,5);
-			set_bit(TCCR1A,4);
-		}
-
-		if(BLUE == 0x0000){
-			//apaga led se OCRnx for zero
-			clr_bit(TCCR1A,7);
-			clr_bit(TCCR1A,6);
-			set_bit(PORTB,1);
-		}else{
-			set_bit(TCCR1A,7);
-			set_bit(TCCR1A,6);
-		}
+	lcd_write("RED GREEN BLUE\0");
+	while (1){
+		verifyRGB();
 		
 		mde(estado);
+		
+		if(numOVF0 >= 5*61){
+			if((PINC & 0x0E) == 0x0C) mudarRGB = 1;
+			if((PINC & 0x0E) == 0x06) mudarRGB = 2;
+			passo += 5;
+			mudarTexto = 1;
+			numOVF0 = 0;
+		}
 	}
-	
 	return 0;
 }
 
@@ -141,10 +128,21 @@ void lcd_init(){
 	clr_bit(LCD_CTRL,RS);
 	_delay_ms(50);
 	
+	// Instruções: Set DDRAM adress
+	LCD_DATA = (0x33 & 0xF0) | (LCD_DATA & 0x0F);
+	pulso_enable();
+	LCD_DATA = ((0x33 & 0x0F) << 4) | (LCD_DATA & 0x0F);
+	pulso_enable();
+	
+	// Instruções: 
+	LCD_DATA = (0x32 & 0xF0) | (LCD_DATA & 0x0F);
+	pulso_enable();
+	LCD_DATA = ((0x32 & 0x0F) << 4) | (LCD_DATA & 0x0F);
+	pulso_enable();
+	
 	// Instruções: Canal de 4 bits, 2 linhas, caracteres de 5x10 bits
 	LCD_DATA = (0x28 & 0xF0) | (LCD_DATA & 0x0F);
 	pulso_enable();
-	
 	LCD_DATA = ((0x28 & 0x0F) << 4) | (LCD_DATA & 0x0F);
 	pulso_enable();
 	
@@ -162,7 +160,7 @@ void lcd_init(){
 }
 
 void numIntoString(char *str, int start_pos,int num){
-	int centena,dezena,unidade;
+	short int centena,dezena,unidade;
 	
 	if(num >= 100){
 		centena = num/100;
@@ -195,12 +193,8 @@ void mde(char s){
 	//--------------------ESTADO_INICIAL--------------------
 	case 0:
 		if(mudarTexto == 1){
-			lcd_cmd(0x01,0);
-			lcd_cmd(0x02,0);
-			lcd_write("RED GREEN BLUE\0");
 			_delay_ms(10);
 			lcd_cmd(0xC0,0);
-			
 			bottom_line[3] = ' ';
 			bottom_line[8] = ' ';
 			bottom_line[13] = ' ';
@@ -213,31 +207,25 @@ void mde(char s){
 	//--------------------ESTADO_ALTERA_RED--------------------
 	case 1:
 		if(mudarRGB == 1){
-			if(numRed == 255){
+			if(numRed >= (255-passo)){
 				numRed = 255;
 			}else{
-				numRed += 5;	
+				numRed += passo;	
 			}
-			
-			mudarRGB = 0;
 		}else if(mudarRGB == 2){
-			if(numRed == 0){
+			if(numRed <= (0 + passo)){
 				numRed = 0;
 			}else{
-				numRed -= 5;
+				numRed -= passo;
 			}
-			mudarRGB = 0;
 		}else{}
-			
+		
+		if(mudarRGB != 0)TCCR0B = 0x05; mudarRGB = 0;
 		RED = numRed;
 		
 		if(mudarTexto == 1){
-			lcd_cmd(0x01,0);
-			lcd_cmd(0x02,0);
-			lcd_write("RED GREEN BLUE\0");
 			_delay_ms(10);
 			lcd_cmd(0xC0,0);
-			
 			numIntoString(ptr_bottomline, 2, numRed);
 			bottom_line[3] = '*';
 			bottom_line[8] = ' ';
@@ -248,33 +236,28 @@ void mde(char s){
 		break;
 	//--------------------ESTADO_ALTERA_RED--------------------
 	
-	//--------------------ESTADO_ALTERA_BLUE--------------------
+	//--------------------ESTADO_ALTERA_GREEN--------------------
 	case 2:
 		if(mudarRGB == 1){
-			if(numGreen == 255){
+			if(numGreen >= (255-passo)){
 				numGreen = 255;
 			}else{
-				numGreen += 5;
+				numGreen += passo;
 			}
-			mudarRGB = 0;
 		}else if(mudarRGB == 2){
-			if(numGreen == 0){
+			if(numGreen <= (0 + passo)){
 				numGreen = 0;
 			}else{
-				numGreen -= 5;
+				numGreen -= passo;
 			}
-			mudarRGB = 0;
 		}else{}
-			
+		
+		if(mudarRGB != 0)TCCR0B = 0x05; mudarRGB = 0;	
 		GREEN = numGreen;
 		
 		if(mudarTexto == 1){
-			lcd_cmd(0x01,0);
-			lcd_cmd(0x02,0);
-			lcd_write("RED GREEN BLUE\0");
 			_delay_ms(10);
 			lcd_cmd(0xC0,0);
-			
 			numIntoString(ptr_bottomline, 7, numGreen);
 			bottom_line[3] = ' ';
 			bottom_line[8] = '*';
@@ -283,35 +266,30 @@ void mde(char s){
 			mudarTexto = 0;
 		}
 		break;
-	//--------------------ESTADO_ALTERA_BLUE--------------------
-	
 	//--------------------ESTADO_ALTERA_GREEN--------------------
+	
+	//--------------------ESTADO_ALTERA_BLUE--------------------
 	case 3:
 		if(mudarRGB == 1){
-			if(numBlue == 255){
+			if(numBlue >= (255-passo)){
 				numBlue = 255;
 			}else{
-				numBlue += 5;
+				numBlue += passo;
 			}
-			mudarRGB = 0;
 		}else if(mudarRGB == 2){
-			if(numBlue == 0){
+			if(numBlue <= (0 + passo)){
 				numBlue = 0;
 			}else{
-				numBlue -= 5;
+				numBlue -= passo;
 			}
-			mudarRGB = 0;
 		}else{}
-			
+		
+		if(mudarRGB != 0)TCCR0B = 0x05; mudarRGB = 0;
 		BLUE = numBlue;
 		
 		if(mudarTexto == 1){
-			lcd_cmd(0x01,0);
-			lcd_cmd(0x02,0);
-			lcd_write("RED GREEN BLUE\0");
 			_delay_ms(10);
 			lcd_cmd(0xC0,0);
-			
 			numIntoString(ptr_bottomline, 12, numBlue);
 			bottom_line[3] = ' ';
 			bottom_line[8] = ' ';
@@ -320,10 +298,42 @@ void mde(char s){
 			mudarTexto = 0;
 		}
 		break;
-	//--------------------ESTADO_ALTERA_GREEN--------------------
-	
+	//--------------------ESTADO_ALTERA_BLUE--------------------
 	default:
 		break;
+	}
+	return;
+}
+
+void verifyRGB(){
+	if(RED == 0x00){
+		//apaga led se OCRnx for zero
+		clr_bit(TCCR2A,7);
+		clr_bit(TCCR2A,6);
+		clr_bit(PORTB,3);
+		}else{
+		set_bit(TCCR2A,7);
+		clr_bit(TCCR2A,6);
+	}
+
+	if(GREEN == 0x0000){
+		//apaga led se OCRnx for zero
+		clr_bit(TCCR1A,5);
+		clr_bit(TCCR1A,4);
+		clr_bit(PORTB,2);
+		}else{
+		set_bit(TCCR1A,5);
+		clr_bit(TCCR1A,4);
+	}
+
+	if(BLUE == 0x0000){
+		//apaga led se OCRnx for zero
+		clr_bit(TCCR1A,7);
+		clr_bit(TCCR1A,6);
+		clr_bit(PORTB,1);
+		}else{
+		set_bit(TCCR1A,7);
+		clr_bit(TCCR1A,6);
 	}
 	return;
 }
@@ -332,6 +342,10 @@ ISR(PCINT1_vect) {
 	//PC1 -> aumenta
 	//PC2 -> estado
 	//PC3 -> diminui
+	TCCR0B = 0x00;
+	TCNT0 = 0x00;
+	numOVF0 = 0;	
+	
 	if((PINC & 0x0E) == 0x0A){
 		switch(estado){
 		case 0:
@@ -351,8 +365,13 @@ ISR(PCINT1_vect) {
 		}
 		mudarTexto = 1;
 		mudarRGB = 0;
+		passo = 5;
 	}else{}
 	
-	if((PINC & 0x0E) == 0x0C) mudarRGB = 1; mudarTexto = 1;
-	if((PINC & 0x0E) == 0x06) mudarRGB = 2; mudarTexto = 1;
+	if((PINC & 0x0E) == 0x0C)mudarRGB = 1; mudarTexto = 1; passo = 5;	
+	if((PINC & 0x0E) == 0x06)mudarRGB = 2; mudarTexto = 1; passo = 5;
+}
+
+ISR(TIMER0_OVF_vect){
+	numOVF0++;	
 }
