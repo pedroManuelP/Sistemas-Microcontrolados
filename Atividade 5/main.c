@@ -22,6 +22,8 @@
 #define DIN PB3
 #define LOAD PB2
 #define CLK PB5
+#define CENTRO_DO_SINAL 0x01FF
+#define DEAD_ZONE 0x0064
 
 void lcd_cmd(unsigned char c, char cd);
 void lcd_write(char *c);
@@ -35,18 +37,23 @@ void m_init();
 void m_clear();
 void m_set_load(uint8_t row, uint8_t col, uint8_t value);
 
+void ad_init();
+void ad_joystick();
+
 void lcd_text_update();
 void m_update();
 void snake_into_m();
-void snake_move(uint8_t up_down, uint8_t left_right);
+void snake_move(uint8_t direction);
 
 char lcd_text[2][17] = {"                \0","                \0"};
 volatile uint8_t snake[8][2] = {0};
 volatile uint8_t snake_size = 8;
 volatile uint8_t m_rows[8] = {0}; //linhas da matriz
+volatile uint8_t mov = 0;
+volatile uint16_t sinal_vert = 0x0000;
+volatile uint16_t sinal_hori = 0x0000;
 int main(void){
-	DDRD = 0xFC;
-	
+	ad_init();
 	lcd_init();
 	spi_init();
 	m_init();
@@ -70,49 +77,24 @@ int main(void){
 	snake[7][1] = 5;
 	//INICIO DO LOOP
     while (1){
-		for(int i = 0;i<3;i++){
-			snake_move(2,1);
-			lcd_text_update();
-			snake_into_m();
-			m_update();
-			_delay_ms(50);
-		}
-
-		for(int i = 0;i<3;i++){
-			snake_move(1,2);
-			lcd_text_update();
-			snake_into_m();
-			m_update();
-			_delay_ms(50);
-		}
-		
-		for(int i = 0;i<3;i++){
-			snake_move(2,0);
-			lcd_text_update();
-			snake_into_m();
-			m_update();
-			_delay_ms(50);
-		}
-		
-		for(int i = 0;i<3;i++){
-			snake_move(0,2);
-			lcd_text_update();
-			snake_into_m();
-			m_update();
-			_delay_ms(50);
-		}
+		ad_joystick();//lê o joystick e mude a direção da cobra
+		_delay_ms(1000);
+		snake_move(mov);
+		snake_into_m();//atualiza a posição da cobra na matriz m_rows[]
+		lcd_text_update();//atualiza o texto do LCD
+		_delay_ms(10);
     }
 	//FIM DO LOOP
 }
-void snake_move(uint8_t up_down, uint8_t left_right){
+void snake_move(uint8_t direction){
 	for(int i = (snake_size-1);i > 0;i--){
 		snake[i][0] = snake[i-1][0];
 		snake[i][1] = snake[i-1][1];
 	}
-	if (up_down == 0)snake[0][0]--;
-	if(up_down == 1)snake[0][0]++;
-  if(left_right == 0)snake[0][1]--;
-	if(left_right == 1)snake[0][1]++;
+	if(direction == 0)snake[0][0]--;
+	if(direction == 1)snake[0][0]++;
+	if(direction == 2)snake[0][1]--;
+	if(direction == 3)snake[0][1]++;
 }
 
 void snake_into_m(){
@@ -134,18 +116,6 @@ void lcd_text_update(){
 	lcd_write(lcd_text[0]);
 	lcd_cmd(0xC0,0);
 	lcd_write(lcd_text[1]);
-}
-
-void m_update(){
-	for (int i = 0; i<8;i++){//i -> rows
-		for (int w = 0;w<8;w++){//w -> cols
-			if(tst_bit(m_rows[i],w) == 0x00){
-				m_set_load(i,w,0);
-			}else{
-				m_set_load(i,w,1);
-			}
-		}//w -> cols
-	}//i -> rows
 }
 
 //==============LCD=====================
@@ -182,6 +152,8 @@ void lcd_write(char *c)
 }
 
 void lcd_init(){
+	DDRD = 0xFC;//PD7:4 entrada do lcd
+	
 	clr_bit(LCD_CTRL,EN);
 	clr_bit(LCD_CTRL,RS);
 	_delay_ms(50);
@@ -270,4 +242,36 @@ void m_set_load(uint8_t row, uint8_t col, uint8_t value){
 	else m_rows[row] &= ~(1 << col);//c.c, zera o bit
 	
 	m_send(row+1, m_rows[row]);//aciona o bit especificado
+}
+
+// ===================CONVERSOR AD=========================
+void ad_init(){
+	clr_bit(PRR,PRADC);
+	DDRC = 0x00;
+	//SDA -> PC4 -> A4 -> Horiz
+	//SCL -> PC5 -> A5 -> Vert
+	
+	ADMUX = 0x40;//REFS1:0 = tensão de referencia Mux3:1 = sinal no conversor
+	ADCSRA = 0x07;//ADPS2:0 = pre-escala do clk
+	ADCSRB = 0x00;//ADTS2:0 = trigger mode
+	set_bit(ADCSRA,ADEN);//habilita AD
+}
+
+void ad_joystick(){
+	ADMUX = 0x44;//recebe sinal vertical
+	set_bit(ADCSRA,ADSC);//inicia conversão
+	while (!(ADCSRA & (1 << ADIF)));//espera conversão acabar
+	sinal_vert = (ADCH << 8)| ADCL;
+	_delay_ms(1);
+
+	ADMUX = 0x45;//recebe sinal horizontal
+	set_bit(ADCSRA,ADSC);//inicia conversão
+	while (!(ADCSRA & (1 << ADIF)));//espera conversão acabar
+	sinal_hori = (ADCH << 8)| ADCL;
+	_delay_ms(1);
+	
+			if((sinal_vert > CENTRO_DO_SINAL+DEAD_ZONE) && (sinal_hori > CENTRO_DO_SINAL - DEAD_ZONE) && (sinal_hori < CENTRO_DO_SINAL + DEAD_ZONE))mov = 0;
+			if((sinal_vert < CENTRO_DO_SINAL-DEAD_ZONE) && (sinal_hori > CENTRO_DO_SINAL - DEAD_ZONE) && (sinal_hori < CENTRO_DO_SINAL + DEAD_ZONE))mov = 1;
+			if((sinal_hori > CENTRO_DO_SINAL+DEAD_ZONE) && (sinal_vert > CENTRO_DO_SINAL - DEAD_ZONE) && (sinal_vert < CENTRO_DO_SINAL + DEAD_ZONE))mov = 2;
+			if((sinal_hori < CENTRO_DO_SINAL-DEAD_ZONE) && (sinal_vert > CENTRO_DO_SINAL - DEAD_ZONE) && (sinal_vert < CENTRO_DO_SINAL + DEAD_ZONE))mov = 3;
 }
