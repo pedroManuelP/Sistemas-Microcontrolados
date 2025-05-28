@@ -1,8 +1,6 @@
 #ifndef _LCD_AVR_H
 #define _LCD_AVR_H
 
-#include <defs_principais_avr.h>
-
 #ifndef RS
 #define RS PD2
 #endif
@@ -15,11 +13,9 @@
 #define LCD_DATA PORTD
 #endif
 
-#ifndef LCD_CTRL
-#define LCD_CTRL PORTD
+#ifndef pulso_enable()
+#define pulso_enable() _delay_us(1); set_bit(LCD_DATA,EN); _delay_us(100); clr_bit(LCD_DATA,EN); _delay_us(45)
 #endif
-
-#define pulso_enable() _delay_us(1); set_bit(LCD_CTRL,EN); _delay_us(100); clr_bit(LCD_CTRL,EN); _delay_us(45)
 
 void lcd_cmd(unsigned char c, char cd);
 void lcd_write(char *c);
@@ -30,9 +26,9 @@ void lcd_cmd(unsigned char c, char cd){
 	LCD_DATA = (c & 0xF0) | (LCD_DATA & 0x0F);
 	
 	if(cd==0)
-		clr_bit(LCD_CTRL,RS);
+		clr_bit(LCD_DATA,RS);
 	else
-		set_bit(LCD_CTRL,RS);
+		set_bit(LCD_DATA,RS);
 	pulso_enable();
 	
 	if((cd==0) && (c < 4)) _delay_ms(2);
@@ -40,9 +36,9 @@ void lcd_cmd(unsigned char c, char cd){
 	LCD_DATA = ((c & 0x0F) << 4) | (LCD_DATA & 0x0F);
 	
 	if(cd==0)
-		clr_bit(LCD_CTRL,RS);
+		clr_bit(LCD_DATA,RS);
 	else
-		set_bit(LCD_CTRL,RS);
+		set_bit(LCD_DATA,RS);
 	pulso_enable();
 	
 	if((cd==0) && (c < 4)) _delay_ms(2);
@@ -57,8 +53,8 @@ void lcd_write(char *c)
 }
 
 void lcd_init(){
-	clr_bit(LCD_CTRL,EN);
-	clr_bit(LCD_CTRL,RS);
+	clr_bit(LCD_DATA,EN);
+	clr_bit(LCD_DATA,RS);
 	_delay_ms(50);
 	
 	// Instruções: Set DDRAM adress
