@@ -4,30 +4,14 @@
  * Created: 23/05/2025 01:03:54
  * Author : chamo
  */ 
-#include <avr/io.h>
-#define F_CPU 16000000UL // define clock do sistema
-#include <util/delay.h>
-#include <avr/interrupt.h>
+#include <defs_principais_AVR.h>
+#include <lcd_AVR.h>
 
-#define set_bit(Y,bit_X) (Y|=(1<<bit_X)) // seta um bit
-#define clr_bit(Y,bit_X) (Y&=~(1<<bit_X)) // clear um bit
-#define cpl_bit(Y,bit_X) (Y^=(1<<bit_X)) // inverte um bit
-#define tst_bit(Y,bit_X) (Y&(1<<bit_X)) // testa um bit(isola um bit)
-#define pulso_enable() _delay_us(1); set_bit(LCD_CTRL,EN); _delay_us(100); clr_bit(LCD_CTRL,EN); _delay_us(45)
-
-#define RS PD2
-#define EN PD3
-#define LCD_DATA PORTD
-#define LCD_CTRL PORTD
 #define DIN PB3
 #define LOAD PB2
 #define CLK PB5
 #define CENTRO_DO_SINAL 0x01FF
 #define DEAD_ZONE 0x0064
-
-void lcd_cmd(unsigned char c, char cd);
-void lcd_write(char *c);
-void lcd_init();
 
 void spi_init();
 void spi_write(uint8_t data);
@@ -44,42 +28,42 @@ void lcd_text_update();
 void m_update();
 void snake_into_m();
 void snake_move(uint8_t direction);
+void snake_status();
 
 char lcd_text[2][17] = {"                \0","                \0"};
 volatile uint8_t snake[8][2] = {0};
-volatile uint8_t snake_size = 8;
+volatile uint8_t snake_size = 1;
 volatile uint8_t m_rows[8] = {0}; //linhas da matriz
-volatile uint8_t mov = 0;
-volatile uint16_t sinal_vert = 0x0000;
-volatile uint16_t sinal_hori = 0x0000;
+volatile uint8_t mov = 2;
+volatile uint16_t sinal_vert;
+volatile uint16_t sinal_hori;
+volatile uint16_t delayMov = 10;
+volatile int tempoDeJogoSeg; 
 int main(void){
+	TCCR1A = 0b00000000;//CTC
+	TCCR1B = 0x00;
+	OCR1A = 15624;//1 seg = 15625 contagens para clk/1024
+	set_bit(TIMSK1,OCIE1A);//overflow interrupt enable
+	
 	ad_init();
 	lcd_init();
 	spi_init();
 	m_init();
 	m_clear();
 	
-	snake[0][0] = 2;
-	snake[0][1] = 2;
-	snake[1][0] = 3;
-	snake[1][1] = 2;
-	snake[2][0] = 4;
-	snake[2][1] = 2;
-	snake[3][0] = 5;
-	snake[3][1] = 2;
-	snake[4][0] = 6;
-	snake[4][1] = 2;
-	snake[5][0] = 6;
-	snake[5][1] = 3;
-	snake[6][0] = 6;
-	snake[6][1] = 4;
-	snake[7][0] = 6;
-	snake[7][1] = 5;
+	TCCR1B = 0b00001101;//comeca timer
+	tempoDeJogoSeg = 0;
 	//INICIO DO LOOP
     while (1){
+		if(tempoDeJogoSeg == 5){
+			tempoDeJogoSeg = 0;
+			m_set_load(0,0,1);
+			_delay_ms(1000);
+		}
 		ad_joystick();//lê o joystick e mude a direção da cobra
-		_delay_ms(1000);
+		_delay/_ms(500);
 		snake_move(mov);
+		snake_status();
 		snake_into_m();//atualiza a posição da cobra na matriz m_rows[]
 		lcd_text_update();//atualiza o texto do LCD
 		_delay_ms(10);
@@ -95,6 +79,28 @@ void snake_move(uint8_t direction){
 	if(direction == 1)snake[0][0]++;
 	if(direction == 2)snake[0][1]--;
 	if(direction == 3)snake[0][1]++;
+}
+
+void snake_status(){
+	uint8_t bateu = 0;
+	if( ((snake[0][0] > 7) | (snake[0][0] < 0)) | ((snake[0][1] > 7) | (snake[0][1] < 0)))bateu = 1;
+	
+	for(int i = 4; i < 8;i++){
+		if((snake[0][0] == snake[i][0]) && (snake[0][1] == snake[i][1])) bateu = 1;
+	}
+	
+	if(bateu){
+		TCCR1B = 0x00;
+		m_clear();
+		for (int i = 0;i < 8;i++){
+			snake[i][0] = 0;
+			snake[i][1] = 0;
+		}
+		mov = 3;
+		//snake_size = 1;
+		TCCR1B = 0b00001101;//comeca timer
+		tempoDeJogoSeg = 0;
+	}
 }
 
 void snake_into_m(){
@@ -116,83 +122,6 @@ void lcd_text_update(){
 	lcd_write(lcd_text[0]);
 	lcd_cmd(0xC0,0);
 	lcd_write(lcd_text[1]);
-}
-
-//==============LCD=====================
-
-void lcd_cmd(unsigned char c, char cd){
-	//---------------Upper_nibble---------------
-	LCD_DATA = (c & 0xF0) | (LCD_DATA & 0x0F);
-	
-	if(cd==0)
-	clr_bit(LCD_CTRL,RS);
-	else
-	set_bit(LCD_CTRL,RS);
-	pulso_enable();
-	
-	if((cd==0) && (c < 4)) _delay_ms(2);
-	//---------------Lower_nibble---------------
-	LCD_DATA = ((c & 0x0F) << 4) | (LCD_DATA & 0x0F);
-	
-	if(cd==0)
-	clr_bit(LCD_CTRL,RS);
-	else
-	set_bit(LCD_CTRL,RS);
-	pulso_enable();
-	
-	if((cd==0) && (c < 4)) _delay_ms(2);
-	////------------------------------------------
-	
-	return;
-}
-
-void lcd_write(char *c)
-{
-	for (; *c!='\0';c++) lcd_cmd(*c,1);
-}
-
-void lcd_init(){
-	DDRD = 0xFC;//PD7:4 entrada do lcd
-	
-	clr_bit(LCD_CTRL,EN);
-	clr_bit(LCD_CTRL,RS);
-	_delay_ms(50);
-	/*
-	// Instrucoes:
-	LCD_DATA = (0x33 & 0xF0) | (LCD_DATA & 0x0F);
-	clr_bit(LCD_CTRL,RS);
-	pulso_enable();
-	LCD_DATA = ((0x33 & 0x0F) << 4) | (LCD_DATA & 0x0F);
-	clr_bit(LCD_CTRL,RS);
-	pulso_enable();
-	
-	// Instrucoes:
-	LCD_DATA = (0x32 & 0xF0) | (LCD_DATA & 0x0F);
-	clr_bit(LCD_CTRL,RS);
-	pulso_enable();
-	LCD_DATA = ((0x32 & 0x0F) << 4) | (LCD_DATA & 0x0F);
-	clr_bit(LCD_CTRL,RS);
-	pulso_enable();
-	*/
-	// Instrucoes: Canal de 4 bits, 2 linhas, caracteres de 5x10 bits
-	LCD_DATA = (0x28 & 0xF0) | (LCD_DATA & 0x0F);
-	clr_bit(LCD_CTRL,RS);
-	pulso_enable();
-	LCD_DATA = ((0x28 & 0x0F) << 4) | (LCD_DATA & 0x0F);
-	clr_bit(LCD_CTRL,RS);
-	pulso_enable();
-	
-	_delay_ms(5);
-	pulso_enable();
-	_delay_us(200);
-	pulso_enable();
-	pulso_enable();
-	
-	lcd_cmd(0x08,0); //Display off, Cursor off, Blink off
-	lcd_cmd(0x01,0); //Clear display, DDRAM address in counter = 0
-	lcd_cmd(0x0C,0); //Display on, Cursor off, Blink off
-	lcd_cmd(0x80,0); //DDRAM address = 0 (primeira posicao na esquerda)
-	return;
 }
 
 //==============SPI=====================
@@ -261,17 +190,22 @@ void ad_joystick(){
 	ADMUX = 0x44;//recebe sinal vertical
 	set_bit(ADCSRA,ADSC);//inicia conversão
 	while (!(ADCSRA & (1 << ADIF)));//espera conversão acabar
-	sinal_vert = (ADCH << 8)| ADCL;
+	sinal_vert = ADC;
 	_delay_ms(1);
 
 	ADMUX = 0x45;//recebe sinal horizontal
 	set_bit(ADCSRA,ADSC);//inicia conversão
 	while (!(ADCSRA & (1 << ADIF)));//espera conversão acabar
-	sinal_hori = (ADCH << 8)| ADCL;
+	sinal_hori = ADC;
 	_delay_ms(1);
 	
-			if((sinal_vert > CENTRO_DO_SINAL+DEAD_ZONE) && (sinal_hori > CENTRO_DO_SINAL - DEAD_ZONE) && (sinal_hori < CENTRO_DO_SINAL + DEAD_ZONE))mov = 0;
-			if((sinal_vert < CENTRO_DO_SINAL-DEAD_ZONE) && (sinal_hori > CENTRO_DO_SINAL - DEAD_ZONE) && (sinal_hori < CENTRO_DO_SINAL + DEAD_ZONE))mov = 1;
-			if((sinal_hori > CENTRO_DO_SINAL+DEAD_ZONE) && (sinal_vert > CENTRO_DO_SINAL - DEAD_ZONE) && (sinal_vert < CENTRO_DO_SINAL + DEAD_ZONE))mov = 2;
-			if((sinal_hori < CENTRO_DO_SINAL-DEAD_ZONE) && (sinal_vert > CENTRO_DO_SINAL - DEAD_ZONE) && (sinal_vert < CENTRO_DO_SINAL + DEAD_ZONE))mov = 3;
+			if((sinal_vert > CENTRO_DO_SINAL+DEAD_ZONE) && (sinal_hori > CENTRO_DO_SINAL - DEAD_ZONE) && (sinal_hori < CENTRO_DO_SINAL + DEAD_ZONE))mov = 3;
+			if((sinal_vert < CENTRO_DO_SINAL-DEAD_ZONE) && (sinal_hori > CENTRO_DO_SINAL - DEAD_ZONE) && (sinal_hori < CENTRO_DO_SINAL + DEAD_ZONE))mov = 2;
+			if((sinal_hori > CENTRO_DO_SINAL+DEAD_ZONE) && (sinal_vert > CENTRO_DO_SINAL - DEAD_ZONE) && (sinal_vert < CENTRO_DO_SINAL + DEAD_ZONE))mov = 0;
+			if((sinal_hori < CENTRO_DO_SINAL-DEAD_ZONE) && (sinal_vert > CENTRO_DO_SINAL - DEAD_ZONE) && (sinal_vert < CENTRO_DO_SINAL + DEAD_ZONE))mov = 1;
+}
+
+// ===================INTERRUPÇÃO CTC=========================
+ISR(TIMER1_COMPA_vect){
+	tempoDeJogoSeg++;
 }
