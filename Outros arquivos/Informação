@@ -1,2 +1,0 @@
-Header files(arquivos terminando em .h) devem ser copiados para o endereço "Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include"
-para que possam ser incluídos e usados no Microchip Studio.
