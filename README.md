@@ -3,8 +3,8 @@ Repositório das atividades e códigos-fonte.
 
 Dupla:
 <ul>
-  <li>Pedro Manuel Pereira Chamorro</li>
-  <li>Valdemar Gonçalves Pereira Neto</li>
+  <li>Pedro Manuel Pereira Chamorro;</li>
+  <li>Valdemar Gonçalves Pereira Neto.</li>
 </ul>
 <br>
 Para adicionar arquivos .h e .c próprios nos projetos do <i>Atmel Studio</i>:
