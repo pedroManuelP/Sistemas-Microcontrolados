@@ -2,7 +2,7 @@
 #define _DEFS_PRINCIPAIS_AVR_H
 
 #ifndef F_CPU
-#define F_CPU 16000000UL //define clock do ATMega328P
+#define F_CPU 16000000UL //define clock do sistema
 #endif
 
 #include <avr/io.h>
