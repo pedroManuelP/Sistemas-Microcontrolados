@@ -9,11 +9,11 @@
 #ifndef MAX7219_AVR_H_
 #define MAX7219_AVR_H_
 
-void m_send(uint8_t address, uint8_t data);
-void m_init();
-void m_clear(uint8_t m_rows[8]);
-void m_set_load(uint8_t m_rows[8],uint8_t row, uint8_t col, uint8_t value);
-void m_update(uint8_t m_rows[8]);
+void m_send(uint8_t address, uint8_t data);//transmite os 2 byts para o max7219
+void m_init();//inicializa o max7219
+void m_clear(uint8_t m_rows[8]);//apaga todos os led
+void m_set_load(uint8_t m_rows[8],uint8_t row, uint8_t col, uint8_t value);//acende um LED específico
+void m_update(uint8_t m_rows[8]);//acende ou apaga os leds de acordo com o vetor inserido
 
 // ===================MAX7219=========================
 void m_send(uint8_t address, uint8_t data){
