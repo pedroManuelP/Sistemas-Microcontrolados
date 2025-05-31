@@ -13,11 +13,12 @@ void ad_init(){
 }
 
 uint16_t ad_get(uint8_t canal){
-	ADMUX = 0x40 | canal;
+	clr_bit(DDRC,canal);//direciona pino do canal como entrada
+	ADMUX = 0x40 | canal;//seleciona canal
 	set_bit(ADCSRA,ADSC);//inicia conversão
 	while (!(ADCSRA & (1 << ADIF)));//espera conversão acabar
 	_delay_ms(1);
-	return ADC;
+	return ADC;//devolve sinal convertido
 }
 
 #endif
