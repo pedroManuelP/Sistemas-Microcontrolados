@@ -7,11 +7,13 @@
 #define N 16
 #define SCALE 100
 
+volatile float dac_float = 0;
+
 volatile uint8_t estado = 0;
-volatile int16_t coef[N];         // Coeficientes escalados ×100
+volatile int16_t coef[N] = {1,1,3,5,7,9,11,12,12,11,9,7,5,3,1,1};         // Coeficientes escalados ×1000
 volatile uint8_t coef_idx = 0;
 
-volatile uint16_t amostras[N] = {0};
+volatile float amostras[N] = {0};
 volatile uint8_t idx_amostra = 0;
 
 int16_t EEMEM coef_eeprom[N];
@@ -20,7 +22,7 @@ void exibir_tela_inicial();
 void exibir_coeficiente();
 void numIntoString(char *str, int start_pos,int num);
 
-int32_t aplicar_filtro_FIR();
+float aplicar_filtro_FIR();
 void dac_set(uint8_t y);
 
 volatile int numOVF0 = 0;
@@ -42,11 +44,12 @@ int main(void) {
 	TCNT0 = 0x00;// zera timer0
 	TIMSK0 = 0x01;
 
+	/*
 	// Carregar coeficientes da EEPROM
 	for (uint8_t i = 0; i < N; i++) {
 		coef[i] = (int16_t)eeprom_read_word((const uint16_t*)&coef_eeprom[i]);
 	}
-
+	*/
 	// Interrupções dos botões
 	PCICR = 0x02;
 	PCMSK1 = 0x0E;
@@ -56,12 +59,13 @@ int main(void) {
 
 	sei();
 	
+	uint8_t dac_value = 0;
 	TCCR0B = 0x05;// 0x05 para clk/1024
 	while (1) {
-		int32_t saida = ad_get(0);
-		if(numOVF0 > 15){
+		
+		if(numOVF0 > 30){
 			numOVF0 = 0;
-			if((PINC & 0x0E) == 0x0C) { // S2 - ▲
+			if((PINC & 0x0E) == 0x0C) { // S2 - ?
 				if (estado != 0) {
 					coef[coef_idx] += 1;
 					if (coef[coef_idx] > 1000) coef[coef_idx] = 1000;
@@ -70,7 +74,7 @@ int main(void) {
 				}
 			}
 
-			if((PINC & 0x0E) == 0x06) { // S1 - ▼
+			if((PINC & 0x0E) == 0x06) { // S1 - ?
 				if (estado != 0) {
 					coef[coef_idx] -= 1;
 					if (coef[coef_idx] < -1000) coef[coef_idx] = -1000;
@@ -79,7 +83,15 @@ int main(void) {
 				}
 			}
 		}
-
+		
+		for (int i = 15; i > 1;i--)
+		{
+			amostras[i] = amostras[i - 1];
+		}
+		
+		dac_float = ad_get(0);
+		dac_float = (dac_float - 512)/512;
+		amostras[0] = dac_float;
 		// Normaliza para 8 bits para DAC (0-255)
 		// Ajusta para que a saída fique dentro do intervalo 0..255
 		// Assumindo que saída pode ser negativa, faz offset e escala:
@@ -88,12 +100,14 @@ int main(void) {
 		//if (saida_dac < 0) saida_dac = 0;
 		//if (saida_dac > 65535) saida_dac = 65535;
 
-		uint8_t dac_value = (uint8_t)(saida >> 2);  // pega os 8 bits mais significativos
+		//uint8_t dac_value = (uint8_t)(saida >> 2);  // pega os 8 bits mais significativos
 		//(dac_value < 256)dac_value++;
 		
-		dac_set(dac_value);
+		dac_float = aplicar_filtro_FIR();
 		
-		aplicar_filtro_FIR();
+		dac_float = dac_float*127 + 127;
+		dac_value = (uint32_t)(dac_float);
+		dac_set(dac_value);
 	}
 }
 
@@ -147,7 +161,7 @@ void dac_set(uint8_t y){
 		clr_bit(PORTC,4);
 	}
 	
-	_delay_ms(2);//delay para segurar o sinal
+	//_delay_us(500);//delay para segurar o sinal
 }
 
 ISR(PCINT1_vect) {
@@ -168,7 +182,7 @@ ISR(PCINT1_vect) {
 		}
 	}
 
-	if((PINC & 0x0E) == 0x0C) { // S2 - ▲
+	if((PINC & 0x0E) == 0x0C) { // S2 - ?
 		if (estado != 0) {
 			coef[coef_idx] += 1;
 			if (coef[coef_idx] > 1000) coef[coef_idx] = 1000;
@@ -177,7 +191,7 @@ ISR(PCINT1_vect) {
 		}
 	}
 
-	if((PINC & 0x0E) == 0x06) { // S1 - ▼
+	if((PINC & 0x0E) == 0x06) { // S1 - ?
 		if (estado != 0) {
 			coef[coef_idx] -= 1;
 			if (coef[coef_idx] < -1000) coef[coef_idx] = -1000;
@@ -201,13 +215,17 @@ ISR(TIMER1_COMPA_vect) {
 	
 }
 
-int32_t aplicar_filtro_FIR() {
-	int32_t acc = 0;
+float aplicar_filtro_FIR() {
+	float acc = 0;
+	float coeficiente = 0;
+	
 	for (uint8_t i = 0; i < N; i++) {
+		coeficiente = coef[i]/100;
 		uint8_t j = (idx_amostra - i + N) % N;
-		acc += (int32_t)amostras[j] * coef[i];
+		acc += amostras[j] * coeficiente;
 	}
-	return acc / SCALE;
+	
+	return acc;
 }
 
 void exibir_tela_inicial() {
