@@ -3,14 +3,17 @@
 #include "ad_AVR.h"
 #include <avr/eeprom.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define N 16
 
 volatile float dac_float = 0;
 
 volatile uint8_t estado = 0;
-volatile float coef[N] = {0.01, 0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.12, 0.12, 0.11, 0.09, 0.07, 0.05, 0.03, 0.01, 0.01};
+volatile uint16_t coef[N] = {0};
 volatile uint8_t coef_idx = 0;
+
+volatile float coef_float[N] = {0.01, 0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.12, 0.12, 0.11, 0.09, 0.07, 0.05, 0.03, 0.01, 0.01};
 
 volatile float amostras[N] = {0};
 volatile uint8_t idx_amostra = 0;
@@ -69,7 +72,7 @@ int main(void) {
 
 			if((PINC & 0x0E) == 0x06 && estado != 0) { // S1
 				coef[coef_idx] -= 0.01;
-				if (coef[coef_idx] < -1.0) coef[coef_idx] = -1.0;
+				//if (coef[coef_idx] < -1.0) coef[coef_idx] = -1.0;
 				eeprom_write_float(&coef_eeprom[coef_idx], coef[coef_idx]);
 				exibir_coeficiente();
 			}
@@ -132,7 +135,7 @@ ISR(PCINT1_vect) {
 
 	if((PINC & 0x0E) == 0x06 && estado != 0) { // S1
 		coef[coef_idx] -= 0.01;
-		if (coef[coef_idx] < -1.0) coef[coef_idx] = -1.0;
+		//if (coef[coef_idx] < -1.0) coef[coef_idx] = -1.0;
 		eeprom_write_float(&coef_eeprom[coef_idx], coef[coef_idx]);
 		exibir_coeficiente();
 	}
@@ -152,8 +155,7 @@ ISR(TIMER1_COMPA_vect) {
 float aplicar_filtro_FIR() {
 	float acc = 0;
 	for (uint8_t i = 0; i < N; i++) {
-		uint8_t j = (idx_amostra - i + N) % N;
-		acc += amostras[j] * coef[i];
+		acc += amostras[i] * coef_float[i];
 	}
 	return acc;
 }
