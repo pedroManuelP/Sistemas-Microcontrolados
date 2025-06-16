@@ -14,7 +14,7 @@
 #endif
 
 #ifndef LCD_CTRL
-#define LCD_CTRL PORTD 
+#define LCD_CTRL PORTD
 #endif
 
 #define pulso_enable() _delay_us(1); set_bit(LCD_CTRL,EN); _delay_us(100); clr_bit(LCD_CTRL,EN); _delay_us(45)
@@ -22,6 +22,9 @@
 void lcd_cmd(unsigned char c, char cd);
 void lcd_write(char *c);
 void lcd_init();
+void lcd_update(char *top_line,char *bottom_line);
+void numIntoString(char *str, int start_pos,int num);
+
 
 void lcd_cmd(unsigned char c, char cd){
 	//---------------Upper_nibble---------------
@@ -72,5 +75,25 @@ void lcd_init(){
 	lcd_cmd(0x80,0); //DDRAM address = 0 (primeira posição na esquerda)
 }
 
+void lcd_update(char *top_line,char *bottom_line){
+	lcd_cmd(0x01,0);
+	lcd_cmd(0x02,0);
+	lcd_write(top_line);
+	lcd_cmd(0xC0,0);
+	lcd_write(bottom_line);
+}
+
+void numIntoString(char *str, int start_pos,int num) {
+	if(num >= 100){
+		str[start_pos-2] = ' ';
+		str[start_pos-2] = (num/100)%10 + '0';
+	}
+	if(num >= 10){
+		str[start_pos-1] = ' ';
+		str[start_pos-1] = (num/10)%10 + '0';
+	}
+	str[start_pos] = ' ';
+	str[start_pos] = num%10 + '0';
+}
 
 #endif
