@@ -37,14 +37,17 @@ uint8_t saida_modulada_dac = 0;
 volatile uint16_t cos_idx = 0;
 volatile float cos_step_float = 0.0;
 
-float fator_modulacao_am = 0.8; //indice de modulacao (80%)
+float fator_modulacao_am = 0.1; //indice de modulacao (80%)
 float mensagem_norm_am;
 
 float freq_desvio_fm;
-float max_desvio_f_norm = 0.5;// Desvio máximo de frequência relativo (ex: 50% da freq. base)
+float max_desvio_f_norm = 0.8;// Desvio máximo de frequência relativo (ex: 50% da freq. base)
 
 float current_step_fsk;
 
+volatile uint8_t current_bit_idx = 0; 
+volatile uint16_t samples_per_bit_counter = 0;
+volatile uint16_t samples_per_bit = 0;
 int main(void)
 {
 	// Inicializando LCD
@@ -65,6 +68,9 @@ int main(void)
 	//inicializa o cos_step_float com um valor padrão 
 	cos_step_float = (float)(taxa*POINTS)/1000.0;
 	if (cos_step_float < 0.01) cos_step_float=0.01;
+	
+	samples_per_bit = 1000 / taxa; // Inicializa para digital também
+	if (samples_per_bit == 0) samples_per_bit = 1;
 	while (1)
 	{
 		entrada = (ad_get(0) >> 2);
@@ -75,6 +81,7 @@ int main(void)
 		cos_idx = (uint16_t)((float)cos_idx + cos_step_float)%POINTS; // avança no indice na tabela dos cossenos
 		
 		float carrier_value = cos_table[cos_idx]; //o valor base da portadora
+		
 		
 		switch (modulacao){
 			case 1://AM - Modulação por Amplitude
@@ -99,9 +106,18 @@ int main(void)
 				break;
 			
 			case 3: // ASK - Amplitude Shift Keying
+				entrada = 67;
+				for(int i = 0;i < 8;i++){
+					if(tst_bit(entrada,i)){
+						saida_modulada_float = carrier_value; // envia a portadora
+					}else{
+						saida_modulada_float = 0; // envia o níel mais baixo após o mapeamento 
+					}
+				}
+			
+				break;
+
 				
-				if (entrada > 120) saida_modulada_float = carrier_value; // envia a portadora
-				else saida_modulada_float = -1.0; // envia o níel mais baixo após o mapeamento 
 				
 			case 4: // FSK - Frequency Shift Keing
 				
@@ -123,8 +139,7 @@ int main(void)
 		saida_modulada_dac = (uint8_t)(((saida_modulada_float + 1.0) / 2.0) * 255.0);// // Mapeia o valor float (-1.0 a 1.0) para o range de 8 bits (0 a 255) do DAC
 		
 		dac_set(saida_modulada_dac);
-		
-		_delay_ms(1);
+	
 	}
 }
 
