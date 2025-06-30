@@ -42,11 +42,11 @@ int main(void) {
 	TCNT0 = 0x00;
 	TIMSK0 = 0x01;
 
-	/*
+	
 	for (uint8_t i = 0; i < N; i++) {
 		coef[i] = eeprom_read_float(&coef_eeprom[i]);
 	}
-	*/
+	
 
 	PCICR = 0x02;
 	PCMSK1 = 0x0E;
