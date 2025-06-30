@@ -136,7 +136,7 @@ int main(void)
 				break;
 		}
 		
-		saida_modulada_dac = (uint8_t)(((saida_modulada_float + 1.0) / 2.0) * 255.0);// // Mapeia o valor float (-1.0 a 1.0) para o range de 8 bits (0 a 255) do DAC
+		saida_modulada_dac = (uint8_t)(((saida_modulada_float + 1.0) / 2.0) * 255.0); // Mapeia o valor float, entre -1.0 a 1.0, para o range de 8 bits (0 a 255) do dac
 		
 		dac_set(saida_modulada_dac);
 	
