@@ -12,8 +12,8 @@
  * @param buffer      Pointer to an array of 360 bytes to store the waveform.
  * @param amplitude_v Peak amplitude in volts (e.g., 2.0 for ±2 V swing).
  * @param offset_v    DC offset in volts (e.g., 2.5 to center the wave in 0–5 V).
- * @param frequency   Frequency in hertz (Hz).
- * @param sample_rate Number of samples per second (Hz).
+ * @param frequency   Frequency in hertz (Hz). Padrão: 30.0f
+ * @param sample_rate Number of samples per second (Hz). Padrão: 1000.0f
  */
 void generate_sine_wave(uint8_t *buffer, float amplitude_v, float offset_v, float frequency, float sample_rate) {
     float phase = 0.0f;

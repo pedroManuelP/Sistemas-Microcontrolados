@@ -18,7 +18,11 @@ compile:
 	$(COMPILE) -c eeprom.c -o eeprom.o
 	$(COMPILE) -c dac_8bit.c -o dac_8bit.o
 	$(COMPILE) -c adc.c -o adc.o
-	$(COMPILE) -o $(FILENAME).elf $(FILENAME).o lcd.o eeprom.o dac_8bit.o adc.o
+	$(COMPILE) -c lookuptriangular.c -o lookuptriangular.o
+	$(COMPILE) -c lookuprampa.c -o lookuprampa.o
+	$(COMPILE) -c lookupsquare.c -o lookupsquare.o
+	$(COMPILE) -c lookupseno.c -o lookupseno.o
+	$(COMPILE) -o $(FILENAME).elf $(FILENAME).o lcd.o eeprom.o dac_8bit.o adc.o lookuprampa.o lookuptriangular.o lookupseno.o lookupsquare.o
 	avr-objcopy -j .text -j .data -O ihex $(FILENAME).elf $(FILENAME).hex 
 	avr-size -C --mcu=$(DEVICE) $(FILENAME).elf
 
