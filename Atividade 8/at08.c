@@ -7,6 +7,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "eeprom.h"
+#include "lookuprampa.h"
+#include "lookupseno.h"
+#include "lookupsquare.h"
+#include "lookuptriangular.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #define botaoS1 1
 #define botaoS2 2
@@ -142,9 +148,25 @@ void setup(){
     ADC_Init();
     DAC_Init();
 }
+#define fHertz 50
+int delayfreqUs(uint8_t isSine, uint8_t freqHertz){
+    if(isSine) return 3*10000/freqHertz;
+    else return 10000/freqHertz;
+}
 
 void loop(){
+    uint8_t buffer[360];
+    //gen_square_wave(buffer, 2.5, 2.5, 50);
+    //gen_triangular_wave(buffer, 2.0, 2.0, 80);
+    //gen_rampa_wave(buffer, 2.0, 2.0);
+    generate_sine_wave(buffer, 2.5, 2.5, 30, 1000);
+    int frequency = delayfreqUs(1, 99);
     while(1){
+        for(int i =0; i<360; i++){
+            DAC_Write(buffer[i]);
+            _delay_us(frequency);
+        }
+        
     }
 }
 
