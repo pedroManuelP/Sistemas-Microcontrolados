@@ -3,7 +3,7 @@
 #include "lcd.h"
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <stdbool.h>
 void writeHeader(short int type, short int duty_cycle, short int status, short int freq, float amplitude, float offset);
 void updateVars(volatile short int type, volatile short int dutycycle, volatile short int status, volatile short int frequencia, volatile float amplitude, volatile float offset);
 //gVars
