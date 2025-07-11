@@ -67,6 +67,7 @@ void MPU6050_READ_SCALED(int16_t *accel, int16_t *gyro, float *temperatura, int1
     }
     for(uint8_t i=0; i<3; i++){
         euler[i] += gyro[i];
+        if(euler[i] > 360 || euler[i] < -360) euler[i] = 0;
     }
 
 }
