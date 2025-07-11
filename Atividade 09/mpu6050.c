@@ -3,7 +3,7 @@
 
 #define MPU6050_PWR_MGMT_1  0x6B
 #define MPU6050_ACCEL_XOUT_H 0x3B
-#define INT16_TO_G_SCALE 16384
+#define INT16_TO_G_SCALE 16384.0f
 #define INT16_TO_DEGREE_SCALE 131
 static uint8_t MPU_read_register(uint8_t reg) {
     TWI_start();
@@ -57,10 +57,10 @@ void MPU6050_read_raw(int16_t *accel_data, int16_t *gyro_data, float* temp) {
     gyro_data[2] = (int16_t)(raw[12] << 8 | raw[13]);
 }
 
-void MPU6050_READ_SCALED(int16_t *accel, int16_t *gyro, float *temperatura, int16_t* euler){
+void MPU6050_READ_SCALED(int16_t *accel, int16_t *gyro, float *temperatura, int16_t* euler, float * accelF){
     MPU6050_read_raw(accel, gyro, temperatura);
     for(uint8_t i=0; i<3; i++){
-        accel[i] = accel[i]/INT16_TO_G_SCALE;
+        accelF[i] = (float) accel[i]/INT16_TO_G_SCALE;
     }
     for(uint8_t i=0; i<3; i++){
         gyro[i] = gyro[i]/INT16_TO_DEGREE_SCALE;
