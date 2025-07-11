@@ -31,23 +31,27 @@ void MPU6050_init(void) {
 }
 
 void MPU6050_read_raw(int16_t *accel_data, int16_t *gyro_data) {
+    uint8_t raw[14];
+
     TWI_start();
-    TWI_write((MPU6050_ADDR << 1) | 0);
-    TWI_write(MPU6050_ACCEL_XOUT_H);
+    TWI_write((MPU6050_ADDR << 1) | 0);             // Write mode
+    TWI_write(MPU6050_ACCEL_XOUT_H);                // Start from ACCEL_XOUT_H
     TWI_start();
-    TWI_write((MPU6050_ADDR << 1) | 1);
+    TWI_write((MPU6050_ADDR << 1) | 1);             // Read mode
 
-    for (int i = 0; i < 6; ++i) {
-        uint8_t high = (i == 5) ? TWI_read_nack() : TWI_read_ack();
-        uint8_t low  = TWI_read_ack();
-        accel_data[i / 2] = (int16_t)((high << 8) | low);
+    for (uint8_t i = 0; i < 13; i++) {
+        raw[i] = TWI_read_ack();
     }
-
-    for (int i = 0; i < 6; ++i) {
-        uint8_t high = (i == 5) ? TWI_read_nack() : TWI_read_ack();
-        uint8_t low  = TWI_read_ack();
-        gyro_data[i / 2] = (int16_t)((high << 8) | low);
-    }
-
+    raw[13] = TWI_read_nack();                      // Last byte, issue NACK
     TWI_stop();
+
+    // Combine high/low bytes into 16-bit integers
+    accel_data[0] = (int16_t)(raw[0] << 8 | raw[1]);
+    accel_data[1] = (int16_t)(raw[2] << 8 | raw[3]);
+    accel_data[2] = (int16_t)(raw[4] << 8 | raw[5]);
+    // Skipping temperature (raw[6] and raw[7])
+    gyro_data[0] = (int16_t)(raw[8] << 8 | raw[9]);
+    gyro_data[1] = (int16_t)(raw[10] << 8 | raw[11]);
+    gyro_data[2] = (int16_t)(raw[12] << 8 | raw[13]);
 }
+
