@@ -6,6 +6,6 @@
 #define MPU6050_ADDR 0x68
 
 void MPU6050_init(void);
-void MPU6050_read_raw(int16_t *accel_data, int16_t *gyro_data);
-void MPU6050_READ_SCALED(int16_t *accel, int16_t *gyro);
+void MPU6050_read_raw(int16_t *accel_data, int16_t *gyro_data, float* temp);
+void MPU6050_READ_SCALED(int16_t *accel, int16_t *gyro, float *temperatura, int16_t* euler);
 #endif

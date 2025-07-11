@@ -31,7 +31,7 @@ void MPU6050_init(void) {
     _delay_ms(100);
 }
 
-void MPU6050_read_raw(int16_t *accel_data, int16_t *gyro_data) {
+void MPU6050_read_raw(int16_t *accel_data, int16_t *gyro_data, float* temp) {
     uint8_t raw[14];
 
     TWI_start();
@@ -50,19 +50,23 @@ void MPU6050_read_raw(int16_t *accel_data, int16_t *gyro_data) {
     accel_data[0] = (int16_t)(raw[0] << 8 | raw[1]);
     accel_data[1] = (int16_t)(raw[2] << 8 | raw[3]);
     accel_data[2] = (int16_t)(raw[4] << 8 | raw[5]);
-    // Skipping temperature (raw[6] and raw[7])
+    int16_t temp_raw = (int16_t)(raw[6] << 8 | raw[7]);
+    *temp =  (temp_raw / 340.0f) + 36.53f;
     gyro_data[0] = (int16_t)(raw[8] << 8 | raw[9]);
     gyro_data[1] = (int16_t)(raw[10] << 8 | raw[11]);
     gyro_data[2] = (int16_t)(raw[12] << 8 | raw[13]);
 }
 
-void MPU6050_READ_SCALED(int16_t *accel, int16_t *gyro){
-    MPU6050_read_raw(accel, gyro);
+void MPU6050_READ_SCALED(int16_t *accel, int16_t *gyro, float *temperatura, int16_t* euler){
+    MPU6050_read_raw(accel, gyro, temperatura);
     for(uint8_t i=0; i<3; i++){
         accel[i] = accel[i]/INT16_TO_G_SCALE;
     }
     for(uint8_t i=0; i<3; i++){
         gyro[i] = gyro[i]/INT16_TO_DEGREE_SCALE;
     }
-    
+    for(uint8_t i=0; i<3; i++){
+        euler[i] += gyro[i];
+    }
+
 }
