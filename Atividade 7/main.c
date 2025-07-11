@@ -1,17 +1,24 @@
 /*
- * Project 7.c
+ * atv7.c
  *
- * Created: 09/06/2025 17:59:32
- * Author : chamo
+ * Created: 09/06/2025 17:32:38
+ * Author : valld
  */ 
 
 #include "defs_principais_AVR.h"
 #include "ad_AVR.h"
 #include "lcd_AVR.h"
 
+#define POINTS 33
+
 void mde(uint8_t s);
 void updateLCD();
 void dac_set(uint8_t y);
+float cos_table[POINTS] = {
+	1.0000,0.9808,0.9239,0.8315,0.7071,0.5556,0.3827,0.1951,0.0000,-0.1951,-0.3827,-0.5556,-0.7071,-0.8315,-0.9239,-0.9808,
+	-1.0000,-0.9808,-0.9239,-0.8315,-0.7071,-0.5556,-0.3827,-0.1951,-0.0000,0.1951,0.3827,0.5556,0.7071,0.8315,0.9239,0.9808,
+	1.0000
+};
 
 char top_line[] =  "Mod: AM  T:  0Hz\0";
 char bottom_line[] =  "Msg:           0\0";
@@ -20,9 +27,27 @@ uint8_t estado = 0;
 uint8_t mudouParametro = 0;
 uint8_t mudouTexto = 1;
 
-uint8_t modulacao = 1; // valor que indica o tipo de modulação. 1 = AM, 2 = FM, 3 = ASK, 4 = FSK
-int taxa = 50; // valor de frêquencia usado no cálculo da saída modulada
-uint8_t entrada = 0;// última entrada analógica
+uint8_t modulacao = 1; // valor que indica o tipo de modulaÃ§Ã£o. 1 = AM, 2 = FM, 3 = ASK, 4 = FSK
+int taxa = 50; // valor de frÃªquencia usado no cÃ¡lculo da saÃ­da modulada
+uint8_t entrada = 0;// Ãºltima entrada analÃ³gica
+
+float saida_modulada_float = 0.0;
+uint8_t saida_modulada_dac = 0;
+
+volatile uint16_t cos_idx = 0;
+volatile float cos_step_float = 0.0;
+
+float fator_modulacao_am = 0.1; //indice de modulacao (80%)
+float mensagem_norm_am;
+
+float freq_desvio_fm;
+float max_desvio_f_norm = 0.8;// Desvio mÃ¡ximo de frequÃªncia relativo (ex: 50% da freq. base)
+
+float current_step_fsk;
+
+volatile uint8_t current_bit_idx = 0; 
+volatile uint16_t samples_per_bit_counter = 0;
+volatile uint16_t samples_per_bit = 0;
 int main(void)
 {
 	// Inicializando LCD
@@ -35,17 +60,86 @@ int main(void)
 	DDRB = 0x3F;
 	DDRC = 0x30;
 	
-	// Inicializando os botões
+	// Inicializando os botÃµes
 	PCICR = 0x02;
 	PCMSK1 = 0x0E;
 	sei();
+	
+	//inicializa o cos_step_float com um valor padrÃ£o 
+	cos_step_float = (float)(taxa*POINTS)/1000.0;
+	if (cos_step_float < 0.01) cos_step_float=0.01;
+	
+	samples_per_bit = 1000 / taxa; // Inicializa para digital tambÃ©m
+	if (samples_per_bit == 0) samples_per_bit = 1;
 	while (1)
 	{
 		entrada = (ad_get(0) >> 2);
 		mde(estado);
 		
-		//modulação da entrada vem aqui depois da mde
-		_delay_ms(1);
+		//modulaÃ§Ã£o da entrada vem aqui depois da mde
+		
+		cos_idx = (uint16_t)((float)cos_idx + cos_step_float)%POINTS; // avanÃ§a no indice na tabela dos cossenos
+		
+		float carrier_value = cos_table[cos_idx]; //o valor base da portadora
+		
+		
+		switch (modulacao){
+			case 1://AM - ModulaÃ§Ã£o por Amplitude
+				mensagem_norm_am = ((float)entrada/255.0) - 0.5; //Mapeia o 255 para -0.5 e 0.5
+				
+				saida_modulada_float = carrier_value *(1.0 +fator_modulacao_am+mensagem_norm_am);//SaÃ­da = Portadora * (1 + Fator_Modulacao * Mensagem_Normalizada)
+				
+				if(saida_modulada_float > 1.0) saida_modulada_float = 1.0;
+				if(saida_modulada_float < -1.0) saida_modulada_float = -1.0;
+				break;
+			
+			case 2: // FM - ModulaÃ§Ã£o por Frequencia
+			
+				freq_desvio_fm = ((float)entrada / 255.0) - 0.5;
+				
+				float current_cos_step_fm = cos_step_float * (1.0 + max_desvio_f_norm * freq_desvio_fm);
+				if(current_cos_step_fm < 0.01) current_cos_step_fm = 0.01;
+				
+				//Atualiza o Ã­ndice com o passo modulado
+				cos_idx = (uint16_t)((float)cos_idx + current_cos_step_fm) % POINTS;
+				saida_modulada_float = cos_table[cos_idx];
+				break;
+			
+			case 3: // ASK - Amplitude Shift Keying
+				entrada = 67;
+				for(int i = 0;i < 8;i++){
+					if(tst_bit(entrada,i)){
+						saida_modulada_float = carrier_value; // envia a portadora
+					}else{
+						saida_modulada_float = 0; // envia o nÃ­el mais baixo apÃ³s o mapeamento 
+					}
+				}
+			
+				break;
+
+				
+				
+			case 4: // FSK - Frequency Shift Keing
+				
+				if(entrada > 128) current_step_fsk = cos_step_float *1.2; // frequencia alta 1.2 vezes maior que a frequencia base
+				else current_step_fsk = cos_step_float * 0.8; // frequencia baixa 0.8 vezes menor que a frequencia base
+				
+				if(current_step_fsk < 0.01) current_cos_step_fm = 0.01;
+				
+				cos_idx = (uint16_t)((float)cos_idx + current_step_fsk)%POINTS;
+				saida_modulada_float = cos_table[cos_idx];
+				
+				break;
+			
+			default:
+				saida_modulada_float = 0.8;
+				break;
+		}
+		
+		saida_modulada_dac = (uint8_t)(((saida_modulada_float + 1.0) / 2.0) * 255.0); // Mapeia o valor float, entre -1.0 a 1.0, para o range de 8 bits (0 a 255) do dac
+		
+		dac_set(saida_modulada_dac);
+	
 	}
 }
 
@@ -80,6 +174,9 @@ void mde(uint8_t s){
 			if(taxa > 0) taxa--;
 		}
 		
+		cos_step_float = (float)(taxa*POINTS)/1000.0; //considerando 1khz de amostragem
+		if(cos_step_float < 0.01) cos_step_float = 0.01;
+		
 		if(mudouTexto) updateLCD();
 		break;
 		//tela ajuste taxa
@@ -88,6 +185,7 @@ void mde(uint8_t s){
 		break;
 	}
 }
+
 
 void updateLCD(){
 	//muda o tipo de modulacao no texto do LCD
@@ -117,7 +215,7 @@ void updateLCD(){
 		break;
 	}
 	
-	//limpa o texto da última entrada e taxa
+	//limpa o texto da Ãºltima entrada e taxa
 	for (int i = 0;i<12;i++){
 		bottom_line[15-i] = ' ';
 	}
@@ -126,7 +224,7 @@ void updateLCD(){
 		top_line[15-i] = ' ';
 	}
 	
-	//escreve o valor entrada e da taxa ou em forma analógia ou digital
+	//escreve o valor entrada e da taxa ou em forma analÃ³gia ou digital
 	if(modulacao == 1 || modulacao == 2){
 		top_line[9] = 'F';
 		numIntoString(top_line,13,taxa);
@@ -212,12 +310,12 @@ ISR(PCINT1_vect){
 		mudouTexto = 1;
 	}
 	
-	if((PINC & 0x0E) == 0x0A){//incrementar parâmetro
+	if((PINC & 0x0E) == 0x0A){//incrementar parÃ¢metro
 		mudouParametro = 1;
 		mudouTexto = 1;
 	}
 
-	if((PINC & 0x0E) == 0x06){//decrementar parâmetro
+	if((PINC & 0x0E) == 0x06){//decrementar parÃ¢metro
 		mudouParametro = 2;
 		mudouTexto = 1;
 	}
