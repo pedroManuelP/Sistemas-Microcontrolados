@@ -30,9 +30,7 @@ snprintf(str_gyro_z, sizeof(str_gyro_z), "%d", gyro[2]);
         lcd_print("x(g)  y(g)  z(g)");
         lcd_goto(1,0);
         lcd_print(str_accel_x);
-        lcd_print(" ");
         lcd_print(str_accel_y);
-        lcd_print(" ");
         lcd_print(str_accel_z);
         break;
     case case_gyro:
@@ -56,7 +54,7 @@ snprintf(str_gyro_z, sizeof(str_gyro_z), "%d", gyro[2]);
         lcd_print(str_euler_y);
        
         lcd_print(str_euler_z);
-        
+        lcd_print(" ");
         lcd_print(str_temp);
     break;
     default:

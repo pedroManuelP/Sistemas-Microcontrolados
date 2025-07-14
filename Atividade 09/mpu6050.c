@@ -69,8 +69,7 @@ void MPU6050_READ_SCALED(int16_t *accel, int16_t *gyro, float *temperatura, floa
     MPU6050_compute_angles(accelF, &euler[0], &euler[1]);
 
     // Set yaw to 0 (no magnetometer available)
-    euler[2] += gyro[2];
-    if(euler[2] > 360 || euler[2] < -360) euler[2] = 0;
+    euler[2] = 0.0f;
 }
 
 void MPU6050_compute_angles(const float *accelF, float *pitch, float *roll) {
