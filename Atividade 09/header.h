@@ -7,7 +7,7 @@
 #include "lcd.h"
 #include <stdio.h>
 #include <stdlib.h>
-void updateDisplay(uint8_t type, int16_t *gyro, float *temperatura, int16_t* euler, float * accelF);
+void updateDisplay(uint8_t type, int16_t *gyro, float *temperatura, float* euler, float * accelF);
 
 
 #endif

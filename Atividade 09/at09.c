@@ -24,7 +24,7 @@ void readMPU();
 
 int16_t g_accel_int[3];
 int16_t g_gyro_int[3];
-int16_t g_euler_int[3];
+float g_euler_int[3];
 float g_temperatura;
 float g_accel_float[3];
 uint8_t state;
@@ -45,7 +45,7 @@ void setInterruptions(){
 int main(){
     setup(); 
     xTaskCreate(loadDisplay, "loadDisplay", 256, NULL, 0, NULL);
-    xTaskCreate(readMPU, "readMPU", 256, NULL, 1, NULL);
+    xTaskCreate(readMPU, "readMPU", 256, NULL, 0, NULL);
     vTaskStartScheduler();
     for(;;);
     return 0;
@@ -54,13 +54,13 @@ int main(){
 void readMPU(){
     for(;;){
     MPU6050_READ_SCALED(g_accel_int, g_gyro_int, &g_temperatura, g_euler_int, g_accel_float);
-    vTaskDelay(10/portTICK_PERIOD_MS);
+    vTaskDelay(50/portTICK_PERIOD_MS);
     }
 }
 void loadDisplay(){
     for(;;){
     updateDisplay(state, g_gyro_int, &g_temperatura, g_euler_int, g_accel_float);
-    vTaskDelay(500/portTICK_PERIOD_MS);
+    vTaskDelay(400/portTICK_PERIOD_MS);
     }
 }
 

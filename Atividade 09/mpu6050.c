@@ -1,5 +1,6 @@
 #include "i2c.h"
 #include "mpu6050.h"
+#include <math.h>
 
 #define MPU6050_PWR_MGMT_1  0x6B
 #define MPU6050_ACCEL_XOUT_H 0x3B
@@ -65,9 +66,14 @@ void MPU6050_READ_SCALED(int16_t *accel, int16_t *gyro, float *temperatura, int1
     for(uint8_t i=0; i<3; i++){
         gyro[i] = gyro[i]/INT16_TO_DEGREE_SCALE;
     }
-    for(uint8_t i=0; i<3; i++){
-        euler[i] += gyro[i];
-        if(euler[i] > 360 || euler[i] < -360) euler[i] = 0;
-    }
+    MPU6050_compute_angles(accelF, &euler[0], &euler[1]);
 
+    // Set yaw to 0 (no magnetometer available)
+    euler[2] += gyro[2];
+    if(euler[2] > 360 || euler[2] < -360) euler[2] = 0;
+}
+
+void MPU6050_compute_angles(const float *accelF, float *pitch, float *roll) {
+    *pitch = atan2f(accelF[0], sqrtf(accelF[1]*accelF[1] + accelF[2]*accelF[2])) * 180.0f / M_PI;
+    *roll  = atan2f(accelF[1], sqrtf(accelF[0]*accelF[0] + accelF[2]*accelF[2])) * 180.0f / M_PI;
 }
