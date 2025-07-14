@@ -58,7 +58,7 @@ void MPU6050_read_raw(int16_t *accel_data, int16_t *gyro_data, float* temp) {
     gyro_data[2] = (int16_t)(raw[12] << 8 | raw[13]);
 }
 
-void MPU6050_READ_SCALED(int16_t *accel, int16_t *gyro, float *temperatura, int16_t* euler, float * accelF){
+void MPU6050_READ_SCALED(int16_t *accel, int16_t *gyro, float *temperatura, float* euler, float * accelF){
     MPU6050_read_raw(accel, gyro, temperatura);
     for(uint8_t i=0; i<3; i++){
         accelF[i] = (float) accel[i]/INT16_TO_G_SCALE;
