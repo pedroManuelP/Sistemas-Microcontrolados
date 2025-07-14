@@ -76,7 +76,7 @@ static void writeLCD(){
 	for(;;){
 		if (xSemaphoreTake(xSemaphore, portMAX_DELAY) == pdTRUE) {
 			writeHeader(gType,gDutyCycle,gstatus,gfreq,gamplitude,goffset);
-			xSemaphoreGive(xSemaphore);       // Libera o semáforo
+			xSemaphoreGive(xSemaphore);       // Libera o sem foro
 		}
 		vTaskDelay(100/portTICK_PERIOD_MS);
 	}
