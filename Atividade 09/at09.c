@@ -1,4 +1,5 @@
 #include <avr/interrupt.h>
+#include <avr/io.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "mpu6050.h"
