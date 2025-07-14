@@ -23,13 +23,11 @@ static QueueHandle_t txQueue;
 
 //inicializa o uart
 void hc05_init(void) {
-    UBRR0H = (unsigned char)(UBRR_VALUE >> 8);
-    UBRR0L = (unsigned char)(UBRR_VALUE);
+    UBRR0H = (uint8_t)(UBRR_VALUE >> 8);
+    UBRR0L = (uint8_t)(UBRR_VALUE);
 
-    UCSR0B = (1 << TXEN0) | (1 << RXEN0);   // Habilita TX e RX
-    UCSR0C = (1 << USBS0) | (3 << UCSZ00);  // 8 bits, 1 stop
-
-    txQueue = xQueueCreate(TX_QUEUE_LEN, TX_MAX_LEN);
+    UCSR0B = (1 << RXEN0) | (1 << TXEN0);   // Habilita TX e RX
+    UCSR0C = (1 << UCSR0B)| (3 << UCSZ00);  // 8 bits, 1 stop
 }
 
 // enviar uma string
@@ -50,6 +48,17 @@ char hc05_send_async(const char *str) {
     return xQueueSend(txQueue, buffer, 0) == pdPASS;
 }
 
+
+char hc05_read_char(){
+	while(!(UCSR0A & (1 << RXC0)));
+	return UDR0;
+}
+
+void hc05_load(){
+	hc05_send_string("OI");
+	hc05_send_string("]\r\n");
+}
+/*
 //Task do FreeRTOS que envia as strings da fila 
 void vTaskBluetooth(void *pvParameters) {
     char msg[TX_MAX_LEN];
@@ -59,3 +68,4 @@ void vTaskBluetooth(void *pvParameters) {
         }
     }
 }
+*/
