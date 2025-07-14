@@ -10,6 +10,6 @@
 
 void hc05_init(void); //inicializa o modulo com uart
 void hc05_send_string(const char *str);// envia uma string de forma bloqueante a uart
-void hc05_send_async(const char *str); // infileira uma string para o envio via bluetooth;
+char hc05_send_async(const char *str); // infileira uma string para o envio via bluetooth;
 void vTaskBluetooth(void *pvParameters); //tarefa FreeRtos para enviar a meensagens via a fila
 #endif
