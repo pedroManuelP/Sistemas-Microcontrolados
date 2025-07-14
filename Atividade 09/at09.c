@@ -32,6 +32,7 @@ void setup(){
     setInterruptions();
     lcd_init();
     MPU6050_init();
+    //ADICIONAR BLUETOOTH_INIT() AQUI;
     xSemaphore = xSemaphoreCreateMutex();
     state =1;
 }
@@ -60,6 +61,7 @@ void readMPU(){
 void loadDisplay(){
     for(;;){
     updateDisplay(state, g_gyro_int, &g_temperatura, g_euler_int, g_accel_float);
+    //ADICIONAR FUNÇÃO BLUETOOTH AQUI
     vTaskDelay(400/portTICK_PERIOD_MS);
     }
 }
