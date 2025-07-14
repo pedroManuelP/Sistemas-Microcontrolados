@@ -31,25 +31,35 @@ void updateDisplay(uint8_t type, int16_t *gyro, float *temperatura, int16_t* eul
         lcd_clear();
         lcd_goto(0,0);
         lcd_print("x(g)  y(g)  z(g)");
+        lcd_goto(1,0);
         lcd_print(str_accel_x);
+        lcd_print(" ");
         lcd_print(str_accel_y);
+        lcd_print(" ");
         lcd_print(str_accel_z);
         break;
     case case_gyro:
         lcd_clear();
         lcd_goto(0,0);
         lcd_print("x(d)  y(d)  z(d)");
+        lcd_goto(1,0);
         lcd_print(str_gyro_x);
+        lcd_print(" ");
         lcd_print(str_gyro_y);
+        lcd_print(" ");
         lcd_print(str_gyro_z);
     break;
     case case_euler:
         lcd_clear();
         lcd_goto(0,0);
         lcd_print("x  y  z  temp");
+        lcd_goto(1,0);
         lcd_print(str_euler_x);
+        lcd_print(" ");
         lcd_print(str_euler_y);
+        lcd_print(" ");
         lcd_print(str_euler_z);
+        lcd_print(" ");
         lcd_print(str_temp);
     break;
     default:
