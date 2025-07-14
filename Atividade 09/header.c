@@ -47,7 +47,8 @@ snprintf(str_gyro_z, sizeof(str_gyro_z), "%d", gyro[2]);
     case case_euler:
         lcd_clear();
         lcd_goto(0,0);
-        lcd_print("x  y  z  temp");
+        lcd_print("x;y;z;temp:");
+        lcd_print(str_temp);
         lcd_goto(1,0);
         lcd_print(str_euler_x);
         
@@ -55,7 +56,7 @@ snprintf(str_gyro_z, sizeof(str_gyro_z), "%d", gyro[2]);
        
         lcd_print(str_euler_z);
         lcd_print(" ");
-        lcd_print(str_temp);
+        
     break;
     default:
         break;
