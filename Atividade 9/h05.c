@@ -8,9 +8,9 @@
 #include <avr/io.h>
 #include <string.h>
 #include "h05.h"
-#include "freeRTOS/FreeRTOS.h"
-#include "freeRTOS/queue.h"
-#include "freeRTOS/task.h"
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "task.h"
 
 #define F_CPU 16000000UL
 #define BAUD 9600
@@ -54,9 +54,8 @@ char hc05_read_char(){
 	return UDR0;
 }
 
-void hc05_load(){
-	hc05_send_string("OI");
-	hc05_send_string("]\r\n");
+void hc05_load(char *str){
+	hc05_send_string(str);
 }
 /*
 //Task do FreeRTOS que envia as strings da fila 
